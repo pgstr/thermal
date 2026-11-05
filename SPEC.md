@@ -188,6 +188,27 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
 
 **How it fits with AlDente:** AlDente's 28 °C heat protection pauses charging, and Thermal's battery guard cools the battery, so charging resumes sooner.
 
+**Cool charging** (a toggle in the popover, requested 2026-11-05; ships with M3):
+- **Goal:** keep the battery **below 28 °C while charging**. That is the same threshold as AlDente's heat protection, so charging happens cool and AlDente rarely needs to pause.
+- **Active when:**
+  - the toggle is on,
+  - the Mac is on the charger, and
+  - the battery is not full.
+  - Once M4 can read AlDente's charge limit, it also stops once the charge reaches that limit.
+- **Control (battery temperature changes slowly, so the target is re-evaluated every 10 s):**
+
+  | Battery | Minimum fan speed |
+  |---|---|
+  | ≤ 26.5 °C | Hand back to Apple (after at least 60 s at this level) |
+  | 26.5 → 28 °C | 2317 (min) → 4000 rpm, linear |
+  | 28 → 29.5 °C | 4000 → *cap* rpm, linear |
+  | ≥ 29.5 °C | *cap* (default 6000 rpm, adjustable for noise) |
+
+  This aims for about 27 °C, leaving a 1 °C margin below AlDente's pause. Changes are gradual: 250 rpm/s up, 150 rpm/s down.
+- **When 28 °C can't be reached:** fans can't cool the battery below roughly room temperature plus 2–3 °C while it charges. If Thermal has been at the cap for 15 minutes and the battery is still ≥ 28 °C, it shows a notification once ("Can't reach 28 °C here: room too warm or heavy load") and keeps the cap. Lowering the cap trades cooling for quiet.
+- **Status in the popover:** for example "Cool charging · active · 3.4k rpm · battery 28.4 °C → 27 °C".
+- **Combining with other rules:** like every source, it proposes a minimum fan speed and the highest wins (§5.2), so it combines cleanly with the battery guard and the safety overrides. With the toggle on, it effectively replaces the battery guard's 30 °C tier while charging.
+
 **Notifications:** a notification when a rule or safety override fires, at most once per rule every 30 minutes.
 
 **Later, not in v1:** charging rules that call AlDente's `StopCharging`/`StartCharging`. They would only come in if we ever take heat protection over from AlDente.
@@ -217,7 +238,7 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
 | M0 | ✅ Read-only probe | Done (`smcprobe/`) |
 | M1 | ✅ Fan write test (`smcprobe/fantest.c`, run with sudo, 2026-11-05) | Done: mode plus target is enough, `FEna`/`FPSt` are firmware status, clamping and hand-back work. Sleep/wake moved to M3. |
 | M2 | 🚧 Read-only monitoring app | **Done:** menu bar readout, popover, history (SQLite, 1 h/24 h/7 d/30 d charts) and raw SMC view. Measured 0.5% of one core at 1 Hz, about 75 MB of memory. **Still to do:** a full-day run without gaps, and the CPU/GPU die mapping test. Alerts move to M5, configurable menu bar text to later. |
-| M3 | Helper plus fan control | Profiles, curves and the highest-proposal-wins logic work. Safety overrides work. Killing the app with `kill -9` returns the fans to Apple within the lease time. Sleep and wake are safe (including the M1 leftover: does manual mode survive sleep?). Fandy is detected and blocks manual mode. |
+| M3 | Helper plus fan control | **Cool charging toggle (§5.3) is the first user-facing feature.** Profiles, curves and the highest-proposal-wins logic work. Safety overrides work. Killing the app with `kill -9` returns the fans to Apple within the lease time. Sleep and wake are safe (including the M1 leftover: does manual mode survive sleep?). Fandy is detected and blocks manual mode. |
 | M4 | AlDente status (read-only) | The popover shows AlDente's state and charge limit, read through its `GetState`/`GetChargeLimit` Shortcuts. If those are unavailable, it falls back to `NotChargingReason`. It shows "paused by AlDente (heat or limit)" when relevant. |
 | M5 | Combined rules plus notifications | The rules in 5.3 run for a week. Fans are back under Apple's control whenever no rule is active. |
 | M6 | *(optional)* Own charging | `PowerUIBackend` and `CHIE` discharge behind the same `ChargingBackend` interface. Only after M5 is stable, and only if we choose to stop depending on AlDente. |

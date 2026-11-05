@@ -113,7 +113,7 @@ struct MenuBarLabelModel {
 
     static func format(battery: Int?, die: Double?, s: Snapshot) -> String {
         var parts: [String] = []
-        if let battery { parts.append("🔋\(battery)°") }
+        if let battery { parts.append("\(battery)°") }
         if let die { parts.append("\(Int(die.rounded()))°") }
         if s.fansSpinning { parts.append(String(format: "%.1fk", s.averageFanRPM / 1000)) }
         return parts.joined(separator: " ")

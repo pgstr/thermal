@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// Menu bar readout: battery temperature · hottest die · fan speed (only when spinning).
+/// Menu bar readout, plain text: battery °C, hottest die °C, fan speed in k rpm (only when spinning), e.g. "28° 60° 2.3k".
 /// Reads only `menuBarText`, so the status item redraws only when the rounded values change.
 struct MenuBarLabel: View {
     let text: String
