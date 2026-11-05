@@ -16,7 +16,8 @@ It replaces Fandy for fan control. Charging stays with AlDente.
 | M0 Read-only probe | ✅ |
 | M1 Fan write test | ✅ Mode plus target is enough, and handing back to Apple works |
 | M2 Read-only monitoring app | 🚧 Running: menu bar, popover, history and raw SMC view. Still to do: a full-day run, and mapping dies to CPU or GPU. |
-| M3 to M6 | Planned |
+| M3 Fan helper plus Cool charging | ✅ Tested live: follows AlDente's state; crash, hang and sleep fail-safes |
+| M4 to M6 | Planned (M5 gets profiles and more rules) |
 
 ## Build and run
 
@@ -27,6 +28,15 @@ swift test                     # unit tests plus one live-hardware test
 ```
 
 History is stored in `~/Library/Application Support/Thermal/history.sqlite`.
+
+**Fan control (M3):**
+1. Install with `scripts/bundle-app.sh --install`. This needs a valid Apple Development identity, including Apple's WWDR **G3** intermediate certificate.
+2. In the popover, turn on **Cool charging**, click **Enable…** and approve Thermal in System Settings › Login Items.
+
+For exact AlDente integration, create a shortcut named **AlDente State** containing AlDente's **Get State** action.
+
+- **Test hook:** `defaults write dev.streller.thermal debug.forceRPM 3000`. Remove it with `defaults delete dev.streller.thermal debug.forceRPM`.
+- **Emergency hand-back:** `sudo ./smcprobe/fantest auto`.
 
 ## Layout
 
@@ -46,7 +56,11 @@ smcprobe/          M0/M1 diagnostic tools (C, Command Line Tools only)
 docs/evidence/     logs from the experiments that the spec relies on
 ```
 
-Planned for M3: a `FanHelper` target (background helper with admin rights for fan writes; see SPEC §4).
+Fan control (M3):
+- `Sources/FanHelper/`: the root launchd daemon.
+- `Sources/CFanWrite/`: allowlisted SMC fan writes, linked only by the helper.
+- `Sources/FanHelperProtocol/`: the XPC interface.
+- `Resources/dev.streller.thermal.fanhelper.plist`: the daemon's launchd plist.
 
 ## Diagnostic tools
 
