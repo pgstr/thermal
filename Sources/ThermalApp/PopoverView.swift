@@ -163,7 +163,7 @@ private struct CoolChargingSection: View {
             Toggle(isOn: $fans.coolChargingEnabled) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Cool charging").font(.headline)
-                    Text("Keeps the battery below \(Int(fans.target)) °C while charging")
+                    Text("Keeps the battery below \(fans.effectiveTarget, specifier: "%g") °C while charging")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -178,9 +178,23 @@ private struct CoolChargingSection: View {
                         Button("Enable…") { fans.helper.enable() }.controlSize(.small)
                     }
                 }
+                if let a = fans.alDente {
+                    Text("AlDente: limit \(a.chargeLimit)% · charges again at \(a.resumeLevel)%\(a.heatProtection ? " · heat protection \(Int(a.maxTemperature)) °C" : "")")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                if let st = fans.alDenteState {
+                    Text("AlDente now: \(st.title)").font(.caption2).foregroundStyle(.secondary)
+                } else if fans.alDenteShortcutMissing {
+                    Text("Create a shortcut named “AlDente State” (AlDente › Get State) for exact control.")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                }
                 DisclosureGroup("Settings", isExpanded: $showSettings) {
-                    Stepper(value: $fans.target, in: 25...32, step: 0.5) {
-                        Text("Target: \(fans.target, specifier: "%.1f") °C")
+                    if let a = fans.alDente, a.heatProtection {
+                        Text("Target: \(a.maxTemperature, specifier: "%g") °C (from AlDente's heat protection)")
+                    } else {
+                        Stepper(value: $fans.target, in: 25...32, step: 0.5) {
+                            Text("Target: \(fans.target, specifier: "%.1f") °C")
+                        }
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Max fan speed: \(Int(fans.cap)) rpm")
@@ -200,7 +214,7 @@ private struct CoolChargingSection: View {
         case .blocked(let why):
             Label(why, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
         case .idle:
-            Label(fans.coolChargingApplies ? "Battery is cool; Apple controls the fans" : "Waiting: only active while charging",
+            Label(fans.coolChargingApplies ? "Battery is cool; Apple controls the fans" : "Idle: charging not due (sailing or limit reached)",
                   systemImage: "checkmark.circle").foregroundStyle(.secondary)
         }
         if fans.cantReach {

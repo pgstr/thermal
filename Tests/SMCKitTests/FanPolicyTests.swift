@@ -3,14 +3,15 @@ import Testing
 @testable import SMCKit
 
 private func snapshot(battery: Double, die: Double = 50, onAC: Bool = true, percent: Int = 50,
-                      fanRPM: Double = 0, date: Date = Date(timeIntervalSince1970: 1_000_000)) -> Snapshot {
+                      fanRPM: Double = 0, charging: Bool? = nil, reason: Int = 0,
+                      date: Date = Date(timeIntervalSince1970: 1_000_000)) -> Snapshot {
     let fans = (0..<2).map {
         FanStatus(id: $0, actualRPM: fanRPM, targetRPM: 0, minRPM: 2317, maxRPM: 7826, manual: false,
                   state: fanRPM > 0 ? .running : .stopped)
     }
-    let b = BatteryStatus(percent: percent, isCharging: onAC, externalConnected: onAC, fullyCharged: false,
+    let b = BatteryStatus(percent: percent, isCharging: charging ?? onAC, externalConnected: onAC, fullyCharged: false,
                           voltage: 12, amperage: 2000, cycleCount: 2, designCapacity: 6249, rawMaxCapacity: 6286,
-                          notChargingReason: 0, adapterWatts: 96)
+                          notChargingReason: reason, adapterWatts: 96)
     return Snapshot(date: date, sensors: [
         SensorReading(id: "smc:TB0T", name: "Battery 1", group: .battery, celsius: battery),
         SensorReading(id: "hid:PMU tdie1", name: "Die 1", group: .soc, celsius: die),
@@ -40,6 +41,47 @@ private func snapshot(battery: Double, die: Double = 50, onAC: Bool = true, perc
         #expect(off.evaluate(snapshot(battery: 30), now: .now) == nil)
         var onBattery = CoolCharging(enabled: true)
         #expect(onBattery.evaluate(snapshot(battery: 30, onAC: false), now: .now) == nil)
+    }
+
+    let alDente = AlDenteSettings(chargeLimit: 85, sailingLevel: 5, heatProtection: true, maxTemperature: 28)
+    let limitBit = CoolCharging.limitReachedBit
+
+    @Test func appliesWhileChargingAndNearResumeLevel() {
+        var r = CoolCharging(enabled: true); r.alDente = alDente
+        #expect(r.applies(snapshot(battery: 30, percent: 83)))                                   // charging
+        #expect(r.applies(snapshot(battery: 30, percent: 81, charging: false, reason: limitBit))) // resume 80 + 1: pre-cool
+        #expect(!r.applies(snapshot(battery: 30, percent: 83, charging: false, reason: limitBit)))// sailing: no session
+        #expect(!r.applies(snapshot(battery: 30, onAC: false)))
+    }
+
+    @Test func heatPauseInsideSessionKeepsCooling() {
+        // The observed deadlock: AlDente heat-pauses at 82 %, macOS then reports the limit bit.
+        var r = CoolCharging(enabled: true); r.alDente = alDente
+        r.observe(snapshot(battery: 27, percent: 80))                        // charging session starts
+        r.observe(snapshot(battery: 28.5, percent: 82))                      // charging, warming up
+        let paused = snapshot(battery: 28.5, percent: 82, charging: false, reason: limitBit)
+        r.observe(paused)
+        #expect(r.sessionActive)
+        #expect(r.applies(paused))
+        r.observe(snapshot(battery: 27, percent: 85, charging: false, reason: limitBit))  // limit reached
+        #expect(!r.sessionActive)
+    }
+
+    @Test func launchHeuristicAssumesHeatPauseWhenWarm() {
+        var warm = CoolCharging(enabled: true); warm.alDente = alDente
+        let s = snapshot(battery: 29, percent: 83, charging: false, reason: limitBit)
+        warm.observe(s)
+        #expect(warm.applies(s))
+        var cool = CoolCharging(enabled: true); cool.alDente = alDente
+        let c = snapshot(battery: 26, percent: 83, charging: false, reason: limitBit)
+        cool.observe(c)
+        #expect(!cool.applies(c))     // just sailing
+    }
+
+    @Test func fallbackWithoutAlDente() {
+        let r = CoolCharging(enabled: true)
+        #expect(r.applies(snapshot(battery: 30, percent: 77, charging: false, reason: limitBit)))   // ≤ 76 + 1
+        #expect(!r.applies(snapshot(battery: 30, percent: 79, charging: false, reason: limitBit)))
     }
 
     @Test func holdsMinimumBeforeHandingBack() {
@@ -118,5 +160,45 @@ private func snapshot(battery: Double, die: Double = 50, onAC: Bool = true, perc
         var a = FanArbiter()
         let p = [FanProposal(source: "x", minimumRPM: 100, reason: "")]
         #expect(a.step(proposals: p, snapshot: snapshot(battery: 28), now: t0) == 2317)
+    }
+}
+
+@Suite struct AlDenteLiveState {
+    let alDente = AlDenteSettings(chargeLimit: 85, sailingLevel: 5, heatProtection: true, maxTemperature: 28)
+    let limitBit = CoolCharging.limitReachedBit
+
+    func rule(_ state: AlDenteState) -> CoolCharging {
+        var r = CoolCharging(enabled: true); r.alDente = alDente; r.alDenteState = state; return r
+    }
+
+    @Test func parsesShortcutOutput() {
+        #expect(AlDenteState("HeatProtect\n") == .heatProtect)
+        #expect(AlDenteState("Sailing") == .sailing)
+        #expect(AlDenteState("Something new") == .other("Something new"))
+    }
+
+    @Test func stateDecidesWhetherToCool() {
+        let s = snapshot(battery: 29, percent: 83, charging: false, reason: limitBit)
+        #expect(rule(.heatProtect).applies(s))
+        #expect(!rule(.sailing).applies(s))                                    // 83 > 80 + 1
+        #expect(rule(.sailing).applies(snapshot(battery: 29, percent: 81, charging: false, reason: limitBit)))
+        #expect(!rule(.discharging).applies(s))
+        #expect(rule(.charging).applies(snapshot(battery: 29, percent: 82)))
+    }
+
+    @Test func actsEarlyWhileCharging() {
+        var charging = rule(.charging)
+        let t0 = Date(timeIntervalSince1970: 3_000_000)
+        // 27 °C while charging behaves like 28 °C: 4000 rpm (without lead it would be ~3439).
+        #expect(charging.evaluate(snapshot(battery: 27, percent: 82), now: t0)?.minimumRPM == 4000)
+        var heat = rule(.heatProtect)
+        #expect(heat.evaluate(snapshot(battery: 27, percent: 82, charging: false), now: t0)?.minimumRPM ?? 0 < 4000)
+    }
+
+    @Test func keepsMinimumWhileHeatProtectEvenWhenCool() {
+        // AlDente still paused at 26.3 °C (observed): never hand back while it waits.
+        var r = rule(.heatProtect)
+        let p = r.evaluate(snapshot(battery: 26.3, percent: 81, charging: false, reason: limitBit), now: Date(timeIntervalSince1970: 2_000_000))
+        #expect(p?.minimumRPM == 2317)
     }
 }

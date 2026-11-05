@@ -47,9 +47,19 @@ public struct CoolCharging: Sendable {
     public static let evaluationInterval: TimeInterval = 10
     public static let handBackHold: TimeInterval = 60
     public static let cantReachAfter: TimeInterval = 15 * 60
+    /// Degrees the curve acts early while AlDente reports Charging (prevention beats recovery).
+    public static let chargingLead = 1.0
+
+    /// AlDente's settings when available; they define when charging is wanted (see `applies`).
+    public var alDente: AlDenteSettings?
+    /// AlDente's live state (from its Shortcuts action). When known it replaces the inference.
+    public var alDenteState: AlDenteState?
 
     public private(set) var currentRPM: Double = 0          // 0 = no proposal
     public private(set) var cantReach = false
+    /// True from "charging is wanted" (charging seen, or charge ≤ resume level) until the limit is
+    /// reached or the Mac is unplugged. A non-charging state inside a session is a heat pause.
+    public private(set) var sessionActive = false
     private var lastEvaluation = Date.distantPast
     private var belowSince: Date?
     private var atCapAboveTargetSince: Date?
@@ -60,11 +70,54 @@ public struct CoolCharging: Sendable {
         self.cap = cap
     }
 
-    /// Whether the rule applies at all right now (toggle on, on AC, battery not full).
+    /// NotChargingReason bit seen at a charge limit. NOTE: AlDente's heat pause sets the macOS
+    /// limit to the *current* level, so after a few seconds it reports this same bit; the reason
+    /// code alone cannot tell "limit reached" from "heat pause". Hence the session logic below.
+    public static let limitReachedBit = 0x0100_0000
+    /// Without AlDente settings: assume charging resumes at or below this level.
+    public static let fallbackResumeLevel = 76
+    /// Pre-cool this many percent above the resume level, so charging can start right away.
+    public static let preCoolMargin = 1
+
+    /// Whether cooling makes sense now: toggle on, on AC, not full, and charging is wanted:
+    /// - charging, or
+    /// - charge ≤ resume level + margin (charging due or imminent; pre-cool), or
+    /// - inside a charging session below the limit but not charging (AlDente heat pause).
+    /// Normal sailing between resume level and limit does not cool.
     public func applies(_ s: Snapshot) -> Bool {
-        guard enabled, let b = s.battery else { return false }
-        return b.externalConnected && !b.fullyCharged && b.percent < 100
+        guard enabled, let b = s.battery, b.externalConnected, !b.fullyCharged else { return false }
+        if let state = alDenteState {
+            // Exact: cool only when AlDente would charge if not for the temperature.
+            switch state {
+            case .heatProtect: return true
+            case .charging: return true     // the curve only acts near the target (prevents a pause)
+            case .sailing: return b.percent <= resumeLevel + Self.preCoolMargin
+            default: return false
+            }
+        }
+        if b.isCharging { return true }
+        if b.percent <= resumeLevel + Self.preCoolMargin { return true }
+        return sessionActive && b.percent < chargeLimit
     }
+
+    private var resumeLevel: Int { alDente?.resumeLevel ?? Self.fallbackResumeLevel }
+    private var chargeLimit: Int { alDente?.chargeLimit ?? 100 }
+
+    /// Track the charging session (call once per sample, before `applies`).
+    public mutating func observe(_ s: Snapshot) {
+        defer { seenAnySample = true }
+        guard let b = s.battery, b.externalConnected else { sessionActive = false; return }
+        if b.fullyCharged || b.percent >= chargeLimit { sessionActive = false; return }
+        if b.isCharging || b.percent <= resumeLevel { sessionActive = true; return }
+        // At launch we have no history: below the limit, not charging and at/above AlDente's heat
+        // threshold is most likely a heat pause; cooling is the safe guess.
+        if !sessionActive, !seenAnySample, let a = alDente, a.heatProtection,
+           let t = s.batteryTemperature, t >= a.maxTemperature {
+            sessionActive = true
+        }
+    }
+
+    private var seenAnySample = false
 
     /// Pure curve: battery temperature → minimum rpm (0 = hand back to Apple).
     public func curve(battery t: Double, minRPM: Double) -> Double {
@@ -76,13 +129,19 @@ public struct CoolCharging: Sendable {
     }
 
     public mutating func evaluate(_ s: Snapshot, now: Date) -> FanProposal? {
+        observe(s)
         guard applies(s), let t = s.batteryTemperature, let minRPM = s.fans.map(\.minRPM).max() else {
             reset()
             return nil
         }
         if now.timeIntervalSince(lastEvaluation) >= Self.evaluationInterval {
             lastEvaluation = now
-            let wanted = curve(battery: t, minRPM: minRPM)
+            // While AlDente is charging, act 1 °C early: a heat pause costs ≥ 10 min of charging
+            // (AlDente re-checks ~10 min after pausing; observed 19:45:15 → 19:55:17).
+            let lead = alDenteState == .charging ? Self.chargingLead : 0
+            var wanted = curve(battery: t + lead, minRPM: minRPM)
+            // AlDente resumes below its own (lower, unknown) threshold: keep cooling while it waits.
+            if alDenteState == .heatProtect { wanted = max(wanted, minRPM) }
             if wanted == 0 {
                 // Hand back only after staying cool for a while (avoids on/off cycling).
                 belowSince = belowSince ?? now
