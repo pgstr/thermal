@@ -20,12 +20,15 @@ final class Monitor {
 
     let reader = SensorReader()
     let history = HistoryStore(url: HistoryStore.defaultURL())
+    let fans = FanController()
+    @ObservationIgnored private var sleepObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var tick = 0
     @ObservationIgnored private var label = MenuBarLabelModel()
 
     func start() {
         guard task == nil else { return }
+        observeSleep()
         task = Task { [weak self] in
             guard let self else { return }
             self.smcAvailable = await self.reader.smcAvailable
@@ -37,6 +40,7 @@ final class Monitor {
                 if let text = self.label.update(with: s, now: s.date) { self.menuBarText = text }
                 await self.history.record(s)
                 if self.tick % 10 == 0 { self.fandyRunning = Self.isAppRunning(named: "Fandy") }
+                await self.fans.update(with: s, fandyRunning: self.fandyRunning)
                 self.tick += 1
                 // Align to ~1 Hz regardless of how long the read took.
                 let wait = max(0.2, 1 - Date().timeIntervalSince(started))
@@ -48,7 +52,20 @@ final class Monitor {
     func stop() async {
         task?.cancel()
         task = nil
+        await fans.suspend()
         await history.flush()
+    }
+
+    /// The helper also hands back before sleep; this keeps the app from re-taking the fans
+    /// until it has fresh readings after wake.
+    private func observeSleep() {
+        let nc = NSWorkspace.shared.notificationCenter
+        sleepObservers.append(nc.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.fans.suspend() }
+        })
+        sleepObservers.append(nc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.fans.resume() }
+        })
     }
 
     @ObservationIgnored private let log = Logger(subsystem: "dev.streller.thermal", category: "monitor")
@@ -64,10 +81,11 @@ final class Monitor {
         popoverVisible = false
     }
 
-    /// Who owns the fans right now, as far as we can tell (read-only in M2).
+    /// Who owns the fans right now, as far as we can tell.
     var fanOwner: String {
         guard let s = shown else { return "–" }
         if !s.fans.contains(where: \.manual) { return "Apple (automatic)" }
+        if case .active = fans.state { return "Thermal" }
         return fandyRunning ? "Manual (Fandy)" : "Manual (other app)"
     }
 

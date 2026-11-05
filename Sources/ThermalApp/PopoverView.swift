@@ -14,6 +14,8 @@ struct PopoverView: View {
             if let s = monitor.shown {
                 BatterySection(snapshot: s)
                 Divider()
+                CoolChargingSection(fans: monitor.fans)
+                Divider()
                 FanSection(fans: s.fans, owner: monitor.fanOwner)
                 Divider()
                 SensorGroupsSection(snapshot: s)
@@ -149,6 +151,62 @@ private struct SensorGroupsSection: View {
 
     private func binding(_ g: SensorGroup) -> Binding<Bool> {
         Binding(get: { expanded.contains(g) }, set: { if $0 { expanded.insert(g) } else { expanded.remove(g) } })
+    }
+}
+
+private struct CoolChargingSection: View {
+    @Bindable var fans: FanController
+    @State private var showSettings = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $fans.coolChargingEnabled) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Cool charging").font(.headline)
+                    Text("Keeps the battery below \(Int(fans.target)) °C while charging")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+
+            if fans.coolChargingEnabled {
+                statusLine.font(.caption)
+                if !fans.helper.isEnabled {
+                    HStack {
+                        Text("Fan control: \(fans.helper.statusText)").font(.caption2).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Enable…") { fans.helper.enable() }.controlSize(.small)
+                    }
+                }
+                DisclosureGroup("Settings", isExpanded: $showSettings) {
+                    Stepper(value: $fans.target, in: 25...32, step: 0.5) {
+                        Text("Target: \(fans.target, specifier: "%.1f") °C")
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Max fan speed: \(Int(fans.cap)) rpm")
+                        Slider(value: $fans.cap, in: 3000...7500, step: 250)
+                    }
+                }
+                .font(.caption)
+            }
+        }
+        .onAppear { fans.helper.refresh() }
+    }
+
+    @ViewBuilder private var statusLine: some View {
+        switch fans.state {
+        case .active(let rpm, let reason):
+            Label("\(reason) · \(rpm) rpm", systemImage: "fan.fill").foregroundStyle(.teal)
+        case .blocked(let why):
+            Label(why, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+        case .idle:
+            Label(fans.coolChargingApplies ? "Battery is cool; Apple controls the fans" : "Waiting: only active while charging",
+                  systemImage: "checkmark.circle").foregroundStyle(.secondary)
+        }
+        if fans.cantReach {
+            Label("Can't reach the target here: room too warm or heavy load", systemImage: "thermometer.high")
+                .foregroundStyle(.orange)
+        }
     }
 }
 

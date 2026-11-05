@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.streller.thermal.fanhelper</string>
+    <!-- Path inside Thermal.app; registered by the app via SMAppService.daemon(plistName:) -->
+    <key>BundleProgram</key>
+    <string>Contents/MacOS/ThermalFanHelper</string>
+    <key>MachServices</key>
+    <dict>
+        <key>dev.streller.thermal.fanhelper</key>
+        <true/>
+    </dict>
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>dev.streller.thermal</string>
+    </array>
+</dict>
+</plist>
