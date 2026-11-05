@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | M1 done. Next: M2 (needs a real project folder and Xcode). |
+| Status | M1 done. M2 in progress (branch `m2/monitoring-app`). |
 | Date | 2026-11-05 |
 | Target machine | MacBook Pro, Apple M5 Pro (Mac17,9), macOS 27.3 |
 | Evidence | `smcprobe/` (read-only probe, experiment scripts and the findings in [smcprobe/README.md](smcprobe/README.md)) |
@@ -46,6 +46,15 @@
 | Why not charging | `ChargerData.NotChargingReason` | 4096 means held by a charge limit, which is how AlDente pauses. |
 
 **SMC encoding:** integers are little-endian. Only `#KEY` is big-endian.
+
+**Duplicate die sensors (found in M2):**
+- Each `PMU tdieN` appears as three HID services with the same name and the same `LocationID`. Their readings agree within about 1 °C.
+- Thermal polls only the first copy of each, giving 14 die sensors. Sensor ids are `hid:<name>` and `smc:<key>`, stable across launches.
+
+**Cost of reading:**
+- Every HID read is a round trip to a system service: about 0.85 ms, mostly waiting.
+- A full snapshot costs about 0.2% of one core per second.
+- **Menu bar updates cost about 20 ms each.** The label therefore smooths the die value and only changes on a 2 °C move, or after 15 s for smaller drifts.
 
 ### 2.2 Fan control (confirmed by the M1 write test, `smcprobe/fantest.c`)
 
@@ -207,7 +216,7 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
 |---|---|---|
 | M0 | ✅ Read-only probe | Done (`smcprobe/`) |
 | M1 | ✅ Fan write test (`smcprobe/fantest.c`, run with sudo, 2026-11-05) | Done: mode plus target is enough, `FEna`/`FPSt` are firmware status, clamping and hand-back work. Sleep/wake moved to M3. |
-| M2 | Read-only monitoring app | Menu bar plus popover plus history running for a full day without gaps. CPU use < 1% at 1 Hz. |
+| M2 | 🚧 Read-only monitoring app | **Done:** menu bar readout, popover, history (SQLite, 1 h/24 h/7 d/30 d charts) and raw SMC view. Measured 0.5% of one core at 1 Hz, about 75 MB of memory. **Still to do:** a full-day run without gaps, and the CPU/GPU die mapping test. Alerts move to M5, configurable menu bar text to later. |
 | M3 | Helper plus fan control | Profiles, curves and the highest-proposal-wins logic work. Safety overrides work. Killing the app with `kill -9` returns the fans to Apple within the lease time. Sleep and wake are safe (including the M1 leftover: does manual mode survive sleep?). Fandy is detected and blocks manual mode. |
 | M4 | AlDente status (read-only) | The popover shows AlDente's state and charge limit, read through its `GetState`/`GetChargeLimit` Shortcuts. If those are unavailable, it falls back to `NotChargingReason`. It shows "paused by AlDente (heat or limit)" when relevant. |
 | M5 | Combined rules plus notifications | The rules in 5.3 run for a week. Fans are back under Apple's control whenever no rule is active. |
