@@ -1,0 +1,82 @@
+== M1 fan write test ==  FandyFanHelper running: yes
+limits: F0 2317-7826  F1 2317-7826 rpm
+17:29:59 baseline   md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.1
+17:30:00 baseline   md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.1
+17:30:01 baseline   md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.1
+17:30:02 baseline   md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.1
+17:30:03 baseline   md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.2
+
+-- A: mode only (F0md=F1md=1, no target) --
+  write F0md=1                       ok
+  write F1md=1                       ok
+17:30:04 A          md=1/1 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.2
+17:30:05 A          md=1/1 Tg=3758/3758 Ac=   0/   0 St=1/1 FEna=07 FPSt=3 TB0T=26.2
+17:30:06 A          md=1/1 Tg=3758/3758 Ac=   0/   0 St=1/1 FEna=07 FPSt=3 TB0T=26.2
+17:30:07 A          md=1/1 Tg=3758/3758 Ac=   0/   0 St=1/1 FEna=07 FPSt=3 TB0T=26.2
+17:30:08 A          md=1/1 Tg=3758/3758 Ac=1813/1794 St=5/5 FEna=07 FPSt=3 TB0T=26.2
+17:30:09 A          md=1/1 Tg=3758/3758 Ac=3792/3823 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:10 A          md=1/1 Tg=3758/3758 Ac=3767/3774 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:11 A          md=1/1 Tg=3758/3758 Ac=3767/3769 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+
+-- B: target 3000 rpm (mode 1 + Tg) --
+  write F0Tg=3000                    ok
+  write F1Tg=3000                    ok
+17:30:12 B          md=1/1 Tg=3758/3758 Ac=3767/3762 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:14 B          md=1/1 Tg=3000/3000 Ac=3030/3031 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:15 B          md=1/1 Tg=3000/3000 Ac=3010/3005 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:16 B          md=1/1 Tg=3000/3000 Ac=2998/2998 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:17 B          md=1/1 Tg=3000/3000 Ac=2997/3005 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:18 B          md=1/1 Tg=3000/3000 Ac=2998/3003 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:19 B          md=1/1 Tg=3000/3000 Ac=2997/3001 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:20 B          md=1/1 Tg=3000/3000 Ac=3005/3003 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:21 B          md=1/1 Tg=3000/3000 Ac=2997/2999 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:22 B          md=1/1 Tg=3000/3000 Ac=3001/2999 St=5/5 FEna=07 FPSt=3 TB0T=26.3
+17:30:23 B          md=1/1 Tg=3000/3000 Ac=3001/3004 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:24 B          md=1/1 Tg=3000/3000 Ac=3005/3005 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:25 B          md=1/1 Tg=3000/3000 Ac=3001/2997 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:26 B          md=1/1 Tg=3000/3000 Ac=3004/3004 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:27 B          md=1/1 Tg=3000/3000 Ac=2995/3002 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+RESULT B: average actual rpm 3002 -> mode + target is ENOUGH
+
+-- D: step to 4500 rpm --
+  write F0Tg=4500                    ok
+  write F1Tg=4500                    ok
+17:30:28 D          md=1/1 Tg=3000/3000 Ac=2997/3001 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:29 D          md=1/1 Tg=4500/4500 Ac=4401/4442 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:30 D          md=1/1 Tg=4500/4500 Ac=4483/4494 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:31 D          md=1/1 Tg=4500/4500 Ac=4487/4506 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:32 D          md=1/1 Tg=4500/4500 Ac=4501/4501 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:33 D          md=1/1 Tg=4500/4500 Ac=4506/4498 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:34 D          md=1/1 Tg=4500/4500 Ac=4505/4501 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:35 D          md=1/1 Tg=4500/4500 Ac=4496/4508 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:36 D          md=1/1 Tg=4500/4500 Ac=4503/4498 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:37 D          md=1/1 Tg=4500/4500 Ac=4503/4508 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:38 D          md=1/1 Tg=4500/4500 Ac=4504/4494 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:39 D          md=1/1 Tg=4500/4500 Ac=4502/4502 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+
+-- E: clamp check, request 1000 rpm (below min) --
+  write F0Tg=1000 (clamped)          ok
+  write F1Tg=1000 (clamped)          ok
+17:30:40 E          md=1/1 Tg=4500/4500 Ac=4499/4497 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:41 E          md=1/1 Tg=2317/2317 Ac=2244/2223 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:42 E          md=1/1 Tg=2317/2317 Ac=2287/2274 St=5/5 FEna=07 FPSt=3 TB0T=26.5
+17:30:43 E          md=1/1 Tg=2317/2317 Ac=2312/2310 St=5/5 FEna=07 FPSt=3 TB0T=26.4
+17:30:44 E          md=1/1 Tg=2317/2317 Ac=2316/2315 St=5/5 FEna=07 FPSt=3 TB0T=26.5
+17:30:45 E          md=1/1 Tg=2317/2317 Ac=2322/2317 St=5/5 FEna=07 FPSt=3 TB0T=26.5
+
+-- F: hand back to Apple --
+RESTORE auto: F0md=0 -> 0, F1md=0 -> 0
+17:30:46 F/auto     md=0/0 Tg=2317/2317 Ac=2317/2313 St=5/5 FEna=07 FPSt=3 TB0T=26.5
+17:30:47 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=2/2 FEna=00 FPSt=0 TB0T=26.5
+17:30:48 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=2/2 FEna=00 FPSt=0 TB0T=26.5
+17:30:49 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=2/2 FEna=00 FPSt=0 TB0T=26.5
+17:30:50 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=2/2 FEna=00 FPSt=0 TB0T=26.6
+17:30:51 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=2/2 FEna=00 FPSt=0 TB0T=26.6
+17:30:52 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.6
+17:30:53 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.6
+17:30:54 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.6
+17:30:55 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.6
+17:30:56 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.6
+17:30:57 F/auto     md=0/0 Tg=   0/   0 Ac=   0/   0 St=3/3 FEna=00 FPSt=0 TB0T=26.7
+
+DONE. Log: runs/m1/log.txt

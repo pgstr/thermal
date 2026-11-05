@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Probe tool binaries (build with `make -C smcprobe`)
+smcprobe/smcprobe
+smcprobe/fantest
+
+# Raw SMC dumps: large, and they contain device serial numbers (BMSN, …).
+# Summaries worth keeping go to docs/evidence/.
+smcprobe/runs/
+
+# Xcode / SwiftPM (from M2 on)
+build/
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/

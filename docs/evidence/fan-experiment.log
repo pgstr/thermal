@@ -1,0 +1,127 @@
+17:15:01 app=yes helper=yes F0md=1 F1md=1 F0Tg=4084.000 F1Tg=4084.000 F0Ac=4086.000 F1Ac=4092.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.204 
+READY — quit Fandy now
+Fandy quit at 17:16:36
+snapshot without Fandy taken
+Fandy back at 17:17:37
+
+== Fan key timeline (only lines where something other than rpm changed) ==
+17:15:01 app=yes helper=yes F0md=1 F1md=1 F0Tg=4084.000 F1Tg=4084.000 F0Ac=4086.000 F1Ac=4092.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.204 
+17:15:20 app=yes helper=yes F0md=1 F1md=1 F0Tg=4056.000 F1Tg=4056.000 F0Ac=4073.000 F1Ac=4069.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.201 
+17:15:21 app=yes helper=yes F0md=1 F1md=1 F0Tg=4027.000 F1Tg=4027.000 F0Ac=4064.000 F1Ac=4056.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.197 
+17:15:30 app=yes helper=yes F0md=1 F1md=1 F0Tg=3999.000 F1Tg=3999.000 F0Ac=4030.000 F1Ac=4025.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.196 
+17:15:32 app=yes helper=yes F0md=1 F1md=1 F0Tg=3968.000 F1Tg=3968.000 F0Ac=3962.000 F1Ac=3966.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.195 
+17:15:33 app=yes helper=yes F0md=1 F1md=1 F0Tg=3944.000 F1Tg=3944.000 F0Ac=3949.000 F1Ac=3944.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.193 
+17:15:44 app=yes helper=yes F0md=1 F1md=1 F0Tg=3918.000 F1Tg=3918.000 F0Ac=3911.000 F1Ac=3916.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.192 
+17:15:45 app=yes helper=yes F0md=1 F1md=1 F0Tg=3891.000 F1Tg=3891.000 F0Ac=3897.000 F1Ac=3894.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.189 
+17:15:52 app=yes helper=yes F0md=1 F1md=1 F0Tg=3862.000 F1Tg=3862.000 F0Ac=3859.000 F1Ac=3865.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.187 
+17:15:53 app=yes helper=yes F0md=1 F1md=1 F0Tg=3833.000 F1Tg=3833.000 F0Ac=3841.000 F1Ac=3848.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.185 
+17:16:02 app=yes helper=yes F0md=1 F1md=1 F0Tg=3803.000 F1Tg=3803.000 F0Ac=3816.000 F1Ac=3819.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.182 
+17:16:03 app=yes helper=yes F0md=1 F1md=1 F0Tg=3776.000 F1Tg=3776.000 F0Ac=3817.000 F1Ac=3803.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.178 
+17:16:05 app=yes helper=yes F0md=1 F1md=1 F0Tg=3749.000 F1Tg=3749.000 F0Ac=3747.000 F1Ac=3751.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.179 
+17:16:12 app=yes helper=yes F0md=1 F1md=1 F0Tg=3717.000 F1Tg=3717.000 F0Ac=3711.000 F1Ac=3721.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.177 
+17:16:14 app=yes helper=yes F0md=1 F1md=1 F0Tg=3687.000 F1Tg=3687.000 F0Ac=3686.000 F1Ac=3693.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.174 
+17:16:15 app=yes helper=yes F0md=1 F1md=1 F0Tg=3661.000 F1Tg=3661.000 F0Ac=3663.000 F1Ac=3673.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.173 
+17:16:23 app=yes helper=yes F0md=1 F1md=1 F0Tg=3639.000 F1Tg=3639.000 F0Ac=3649.000 F1Ac=3646.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.171 
+17:16:34 app=yes helper=yes F0md=1 F1md=1 F0Tg=3617.000 F1Tg=3617.000 F0Ac=3625.000 F1Ac=3619.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.170 
+17:16:36 app=no helper=yes F0md=0 F1md=0 F0Tg=0.000 F1Tg=0.000 F0Ac=3615.000 F1Ac=3622.000 F0Mn=2317.000 F0St=2 F1St=2 FEna=00 FPSt=0 F0Dc=0.000 
+17:16:41 app=no helper=yes F0md=0 F1md=0 F0Tg=0.000 F1Tg=0.000 F0Ac=0.000 F1Ac=0.000 F0Mn=2317.000 F0St=3 F1St=3 FEna=00 FPSt=0 F0Dc=0.000 
+17:17:37 app=yes helper=yes F0md=0 F1md=0 F0Tg=0.000 F1Tg=0.000 F0Ac=0.000 F1Ac=0.000 F0Mn=2317.000 F0St=3 F1St=3 FEna=00 FPSt=0 F0Dc=0.000 
+17:17:43 app=yes helper=yes F0md=1 F1md=1 F0Tg=2516.000 F1Tg=2516.000 F0Ac=0.000 F1Ac=0.000 F0Mn=2317.000 F0St=3 F1St=3 FEna=07 FPSt=1 F0Dc=0.000 
+17:17:44 app=yes helper=yes F0md=1 F1md=1 F0Tg=2744.000 F1Tg=2744.000 F0Ac=0.000 F1Ac=0.000 F0Mn=2317.000 F0St=1 F1St=1 FEna=07 FPSt=3 F0Dc=0.080 
+17:17:46 app=yes helper=yes F0md=1 F1md=1 F0Tg=2988.000 F1Tg=2988.000 F0Ac=0.000 F1Ac=0.000 F0Mn=2317.000 F0St=1 F1St=1 FEna=07 FPSt=3 F0Dc=0.080 
+17:17:47 app=yes helper=yes F0md=1 F1md=1 F0Tg=3227.000 F1Tg=3227.000 F0Ac=3243.000 F1Ac=3275.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.153 
+17:17:49 app=yes helper=yes F0md=1 F1md=1 F0Tg=3466.000 F1Tg=3466.000 F0Ac=3457.000 F1Ac=3468.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.166 
+17:17:50 app=yes helper=yes F0md=1 F1md=1 F0Tg=3704.000 F1Tg=3704.000 F0Ac=3661.000 F1Ac=3664.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.182 
+17:17:51 app=yes helper=yes F0md=1 F1md=1 F0Tg=3946.000 F1Tg=3946.000 F0Ac=3839.000 F1Ac=3844.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.201 
+17:17:52 app=yes helper=yes F0md=1 F1md=1 F0Tg=4182.000 F1Tg=4182.000 F0Ac=4067.000 F1Ac=4078.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.218 
+17:17:53 app=yes helper=yes F0md=1 F1md=1 F0Tg=4421.000 F1Tg=4421.000 F0Ac=4170.000 F1Ac=4168.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.242 
+17:17:55 app=yes helper=yes F0md=1 F1md=1 F0Tg=4658.000 F1Tg=4658.000 F0Ac=4628.000 F1Ac=4607.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.252 
+17:17:56 app=yes helper=yes F0md=1 F1md=1 F0Tg=4898.000 F1Tg=4898.000 F0Ac=4857.000 F1Ac=4855.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.273 
+17:17:57 app=yes helper=yes F0md=1 F1md=1 F0Tg=5038.000 F1Tg=5038.000 F0Ac=5003.000 F1Ac=5004.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.285 
+17:18:07 app=yes helper=yes F0md=1 F1md=1 F0Tg=4979.000 F1Tg=4979.000 F0Ac=4999.000 F1Ac=4990.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.279 
+17:18:08 app=yes helper=yes F0md=1 F1md=1 F0Tg=4920.000 F1Tg=4920.000 F0Ac=4951.000 F1Ac=4954.000 F0Mn=2317.000 F0St=5 F1St=5 FEna=07 FPSt=3 F0Dc=0.274 
+
+== Non-noisy keys that differ with vs without Fandy ('*' = back to original after reopening) ==
+  * F0St ui8   05 -> 03 -> 05
+  * F0md ui8   01 -> 00 -> 01
+  * F1St ui8   05 -> 03 -> 05
+  * F1md ui8   01 -> 00 -> 01
+  * FEna hex_  07 -> 00 -> 07
+  * FPSt ui8   03 -> 00 -> 03
+  * IR3b flt   00000000 -> 0000f43a -> 00000000
+  * IS9b flt   0000ab3b -> 00000000 -> 0000ab3b
+  * ISbl flt   00000000 -> 0000a039 -> 00000000
+  * PR3b flt   00000000 -> 1c875b3b -> 00000000
+  * PSbl flt   00000000 -> c0fa0f3a -> 00000000
+  * TVPi si32  06000000 -> 02000000 -> 06000000
+  * aP7e ui32  01000000 -> 00000000 -> 01000000
+    mslm flt   00000000 -> 79ecc941 -> b6c3e641
+    msnm flt   00000000 -> cadbaa41 -> 2543c341
+    msn2 flt   000000c0 -> 44e82441 -> e6b71340
+    msl0 flt   000000c0 -> 53f6bd41 -> 3b61db41
+    msl2 flt   000000c0 -> 68b54841 -> 5bd94540
+    msn0 flt   000000c0 -> 95469e41 -> e22ab741
+    msl1 flt   000000c0 -> cbf38541 -> 5bb9d241
+    msn1 flt   000000c0 -> f4c35d41 -> ead7af41
+    F0PC flt   0000203d -> 0000c03c -> 0000803d
+    F1PC flt   0000203d -> 0000c03c -> 0000803d
+    Ts0P flt   0000a141 -> 00009d41 -> 00809f41
+    f005 flt   0000a141 -> 00009d41 -> 00809f41
+    TD13 flt   03789f41 -> 0f0a9e41 -> 35669b41
+    TD22 flt   0cc1be41 -> 0b52c041 -> 2fd3bc41
+    TD12 flt   224b9741 -> 94529841 -> 56829741
+    TD02 flt   367c8441 -> 0c4a8341 -> 6a2d8341
+    TD21 flt   514adc41 -> bae7cc41 -> 7794b841
+    TD10 flt   52079b41 -> c9539b41 -> 45289941
+    SBA1 flt   5a647340 -> 96437340 -> d1227340
+    TD00 flt   62038a41 -> 86a38841 -> 5fcf8641
+    TD14 flt   6c869441 -> 345a9341 -> d9709141
+    TSG1 flt   7c532242 -> 4c201a42 -> 5c482642
+    VR3l flt   80eba43f -> 0014a53f -> 80c3a43f
+    TD20 flt   85a7ad41 -> 772aac41 -> 562fa741
+    TD04 flt   85f18741 -> 9e0c8741 -> 15118641
+    TD03 flt   90488c41 -> bcfc8a41 -> d64c8941
+    SBA3 flt   96437340 -> 6f127340 -> 0c027340
+    TD11 flt   bbb79d41 -> 250c9c41 -> 6bd09841
+    TD23 flt   c7a7e541 -> f235d641 -> 12dfbe41
+    TDVx flt   c7a7e541 -> f235d641 -> 12dfbe41
+    si08 flt   c7a7e541 -> f235d641 -> 12dfbe41
+    TB0T flt   c8ccb841 -> 9899b541 -> 9899b541
+    TB1T flt   c8ccb841 -> 9899b541 -> 9899b541
+    siB0 flt   c8ccb841 -> 9899b541 -> 9899b541
+    TaRF flt   d80d1442 -> 54e41142 -> dcef1c42
+    f004 flt   d80d1442 -> 54e41142 -> dcef1c42
+    TD24 flt   dc16b241 -> 18d1b241 -> 6f88af41
+    SBAV flt   e17a3641 -> 04563641 -> a2453641
+    TD01 flt   e7988c41 -> ad288b41 -> 78f58841
+    SBA2 flt   f8537340 -> 6f127340 -> 0c027340
+    SATd hex_  8784170000000000 -> 8b50190000000000 -> b6181c0000000000
+    SATa hex_  bdff420000000000 -> b3ff4c0000000000 -> adff520000000000
+    SATb hex_  bdff420000000000 -> b3ff4c0000000000 -> adff520000000000
+    TG0H ioft  0000170000000000 -> 0000160000000000 -> 0000160000000000
+    TG0B ioft  9919170000000000 -> 33b3160000000000 -> 33b3160000000000
+    TG0V ioft  9919170000000000 -> 33b3160000000000 -> 33b3160000000000
+    TG1B ioft  9919170000000000 -> 33b3160000000000 -> 33b3160000000000
+    bet0 ioft  9919170000000000 -> 33b3160000000000 -> 33b3160000000000
+  * rVD2 ui32  1f040000 -> 47040000 -> 1f040000
+    zSDa si64  2f47bcfbffffffff -> 9b46bcfbffffffff -> be44bcfbffffffff
+    BAAC si64  8263c2ffffffffff -> 7563c2ffffffffff -> 4b63c2ffffffffff
+    bwM0 si64  8263c2ffffffffff -> 7563c2ffffffffff -> 4b63c2ffffffffff
+    B0TE ui16  72ba -> ffff -> ffff
+    B0AV ui16  8d2c -> 832c -> 802c
+    beu0 ui16  8d2c -> 832c -> 802c
+    B0AT ui16  930b -> 8f0b -> 8f0b
+    bfB0 ui16  930b -> 8f0b -> 8f0b
+    BC3V ui16  d90e -> d60e -> d50e
+    BCMW ui16  d90e -> d60e -> d50e
+    bepF ui16  d90e -> d60e -> d50e
+    BC2V ui16  da0e -> d60e -> d50e
+    bep8 ui16  da0e -> d60e -> d50e
+    BC1V ui16  db0e -> d80e -> d70e
+    BCMV ui16  db0e -> d80e -> d70e
+    bep0 ui16  db0e -> d80e -> d70e
+    B1AT ui16  e700 -> e300 -> e300
+    CHBV ui32  0d0f0000 -> 0b0f0000 -> 090f0000
+    rRAM ui32  48030000 -> 15040000 -> e9020000
+    zSDc ui32  59160000 -> 5a160000 -> 5d160000
+    CH0V ui32  8d2c0000 -> 832c0000 -> 802c0000

@@ -1,0 +1,66 @@
+BASELINES DONE — press Pause charging in AlDente now (waiting up to 10 min)
+Charging stopped at 17:11:22
+PAUSED SNAPSHOT DONE — now resume charging in AlDente (waiting up to 10 min)
+Charging resumed at 17:12:22
+
+NotChargingReason while paused: "NotChargingReason"=4096
+
+== Keys changed on pause (non-noisy) — '*' = reverted on resume ==
+  * B0OS hex_  83e4 -> c3e4 -> 83e4
+  * CHBI ui32  ba1c0000 -> 22190000 -> ba1c0000
+  * ISbl flt   00000000 -> 0000a039 -> 00000000
+  * TVCi si32  00000000 -> 01000000 -> 00000000
+  * TVDi si32  02000000 -> 03000000 -> 02000000
+  * TVGi si32  27000000 -> 28000000 -> 27000000
+  * VSdl flt   0070993f -> 0098993f -> 0070993f
+    IP3b flt   00000000 -> 00001f3b -> 00001f3b
+    PP3b flt   00000000 -> 6679003b -> 6055003b
+    F0PC flt   0000003d -> 0000203d -> 0000203d
+    F1PC flt   0000003d -> 0000203d -> 0000203d
+    Ts0P flt   00009a41 -> 0000a241 -> 0000a741
+    f005 flt   00009a41 -> 0000a241 -> 0000a741
+    SBAS flt   0000c041 -> 0000c841 -> 0000c841
+    si17 flt   0000c041 -> 0000c841 -> 0000c841
+    TB0T flt   9899b941 -> 3033bb41 -> 0000bc41
+    TB1T flt   9899b941 -> 3033bb41 -> 0000bc41
+    siB0 flt   9899b941 -> 3033bb41 -> 0000bc41
+    TB2T flt   c8ccb441 -> 0000b441 -> 9899b141
+    BAST hex_  00000000000000000083e4400280020010 -> 000000000000000000c3e4000282020010 -> 00000000000000000083e4400282020010
+    SATa hex_  d4ff2b0000000000 -> cfff300000000000 -> caff350000000000
+    TG0B ioft  3333170000000000 -> 6666170000000000 -> 0080170000000000
+    TG0V ioft  3333170000000000 -> 6666170000000000 -> 0080170000000000
+    TG1B ioft  3333170000000000 -> 6666170000000000 -> 0080170000000000
+    bet0 ioft  3333170000000000 -> 6666170000000000 -> 0080170000000000
+    TG2B ioft  9999160000000000 -> 0080160000000000 -> 3333160000000000
+  * msl0 flt   000000c0 -> c7859d3e -> 000000c0
+  * mslm flt   00000000 -> 58cb1040 -> 00000000
+  * msn0 flt   000000c0 -> 4c0142bd -> 000000c0
+  * msnm flt   00000000 -> 6b09f53f -> 00000000
+    zSDa si64  47c5bcfbffffffff -> 8897bcfbffffffff -> 8897bcfbffffffff
+    bfI0 si8   1b -> 1c -> 1c
+    B0UC ui16  1800 -> 1900 -> 1900
+    B0NC ui16  2619 -> 2d19 -> 2d19
+    BIMX ui16  3446 -> 7f47 -> 5148
+    bfC0 ui16  8e0b -> 8d0b -> 8a0b
+    B0FC ui16  8e18 -> 9518 -> 9518
+    BFC1 ui16  8e18 -> 9518 -> 9518
+    BFC2 ui16  8e18 -> 9518 -> 9518
+    bwO0 ui16  8e18 -> 9518 -> 9518
+    bwP0 ui16  8e18 -> 9518 -> 9518
+    B0AT ui16  940b -> 960b -> 970b
+    bfB0 ui16  940b -> 960b -> 970b
+    B2AT ui16  e200 -> e100 -> de00
+    B1AT ui16  e800 -> ea00 -> eb00
+    zSDc ui32  4d160000 -> 4e160000 -> 4e160000
+    BfRM ui32  80430000 -> 50460000 -> 50460000
+    YUx0 ui8   10 -> 20 -> 20
+    BfSC ui8   17 -> 19 -> 19
+    BRSC ui8   18 -> 19 -> 19
+    BUIC ui8   18 -> 19 -> 19
+    D4LI ui8   47 -> 4f -> 11
+    BDD1 ui8   49 -> 48 -> 48
+    BDD2 ui8   49 -> 48 -> 48
+    BDD3 ui8   49 -> 48 -> 48
+    beo0 ui8   49 -> 48 -> 48
+    beo8 ui8   49 -> 48 -> 48
+    beoF ui8   49 -> 48 -> 48
