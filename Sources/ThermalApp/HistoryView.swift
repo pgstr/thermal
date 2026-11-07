@@ -13,7 +13,8 @@ struct HistoryView: View {
     @State private var charge: [HistoryPoint] = []
     @State private var charging: [HistoryPoint] = []
     @State private var fans: [HistoryPoint] = []
-    @State private var health: [BatteryHealthPoint] = []
+    @State private var health: [BatteryHealthPoint] = []          // all days (for the summary line)
+    @State private var healthPoints: [HealthChartPoint] = []      // what the chart shows for this range
     @State private var stats: HistoryStore.Stats?
     @State private var selection: Date?
     @State private var healthSelection: Date?
@@ -207,77 +208,96 @@ struct HistoryView: View {
         return "Peak \(Int(peak).formatted()) rpm · on \(Int(Double(spinning) / Double(max(fans.count, 1)) * 100))% of the time"
     }
 
-    // MARK: Battery health (all time, independent of the range picker)
+    // MARK: Battery health (follows the range picker)
+    //  1 h / 24 h: the stored metric (5 s / 1 min), shows movement within the hour or day.
+    //  7 d and longer: one point per day (mean with min–max band), backfilled from the power log.
+
+    struct HealthChartPoint: Identifiable {
+        let date: Date, value: Double, low: Double?, high: Double?, cycles: Int?
+        var id: TimeInterval { date.timeIntervalSince1970 }
+    }
+
+    private var healthIsDaily: Bool { range != .hour && range != .day }
 
     private var healthRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(selectedHealth.map { $0.day.formatted(.dateTime.day().month(.abbreviated).year()) } ?? "Battery health")
+                Text(selectedHealth.map { healthDateText($0.date) } ?? "Battery health")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text((selectedHealth ?? health.last).map { String(format: "%.1f%%", $0.health) } ?? "–")
+                Text((selectedHealth?.value ?? healthPoints.last?.value ?? health.last?.health)
+                        .map { String(format: "%.1f%%", $0) } ?? "–")
                     .font(.system(size: 28, weight: .light)).monospacedDigit()
                 Text(healthSubline).font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
-            if health.count > 1 {
+            if healthPoints.count > 1 {
                 Chart {
-                    ForEach(health) { h in
-                        AreaMark(x: .value("Day", h.day), yStart: .value("Low", h.low), yEnd: .value("High", h.high))
-                            .foregroundStyle(Color.cyan.opacity(0.12))
-                            .interpolationMethod(.monotone)
-                        LineMark(x: .value("Day", h.day), y: .value("%", h.health))
+                    ForEach(healthPoints) { h in
+                        if let lo = h.low, let hi = h.high {
+                            AreaMark(x: .value("Time", h.date), yStart: .value("Low", lo), yEnd: .value("High", hi))
+                                .foregroundStyle(Color.cyan.opacity(0.12))
+                                .interpolationMethod(.monotone)
+                        }
+                        LineMark(x: .value("Time", h.date), y: .value("%", h.value))
                             .foregroundStyle(Color.cyan)
                             .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
                             .interpolationMethod(.monotone)
-                        if health.count <= 31 {
-                            PointMark(x: .value("Day", h.day), y: .value("%", h.health))
+                        if healthIsDaily, healthPoints.count <= 31 {
+                            PointMark(x: .value("Time", h.date), y: .value("%", h.value))
                                 .foregroundStyle(Color.cyan).symbolSize(14)
                         }
                     }
                     if let s = selectedHealth {
-                        RuleMark(x: .value("Selected", s.day)).foregroundStyle(Color.secondary.opacity(0.4))
+                        RuleMark(x: .value("Selected", s.date)).foregroundStyle(Color.secondary.opacity(0.4))
                     }
                 }
+                .chartXScale(domain: domain)
                 .chartYScale(domain: healthDomain)
                 .chartXSelection(value: $healthSelection)
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 6)) { _ in
-                        AxisGridLine().foregroundStyle(Color.secondary.opacity(0.12))
-                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-                    }
-                }
+                .chartXAxis { timeAxis }
                 .chartYAxis {
                     AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { v in
                         AxisGridLine().foregroundStyle(Color.secondary.opacity(0.12))
-                        AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))%") } }
+                        AxisValueLabel { if let d = v.as(Double.self) { Text(String(format: "%g%%", d)) } }
                     }
                 }
                 .frame(height: 110)
             } else {
-                Text("Trend appears after a few days").font(.caption).foregroundStyle(.tertiary)
+                Text(healthIsDaily ? "Trend appears after a few days" : "No health samples in this range yet")
+                    .font(.caption).foregroundStyle(.tertiary)
             }
         }
     }
 
-    private var selectedHealth: BatteryHealthPoint? {
+    private var selectedHealth: HealthChartPoint? {
         guard let sel = healthSelection else { return nil }
-        return health.min { abs($0.day.timeIntervalSince(sel)) < abs($1.day.timeIntervalSince(sel)) }
+        return healthPoints.min { abs($0.date.timeIntervalSince(sel)) < abs($1.date.timeIntervalSince(sel)) }
+    }
+
+    private func healthDateText(_ d: Date) -> String {
+        healthIsDaily ? d.formatted(.dateTime.day().month(.abbreviated).year())
+                      : d.formatted(.dateTime.hour().minute())
     }
 
     private var healthSubline: String {
-        guard let h = selectedHealth ?? health.last else { return "Recorded daily" }
-        if selectedHealth != nil {
-            return String(format: "%.1f – %.1f%% during the day · %d cycles", h.low, h.high, h.cycles)
+        if let s = selectedHealth {
+            var parts: [String] = []
+            if let lo = s.low, let hi = s.high { parts.append(String(format: "%.1f – %.1f%% during the day", lo, hi)) }
+            if let c = s.cycles { parts.append("\(c) cycles") }
+            return parts.isEmpty ? "Battery health" : parts.joined(separator: " · ")
         }
+        guard let h = health.last else { return "Recorded daily" }
         var parts: [String] = []
+        if let lo = healthPoints.map({ $0.low ?? $0.value }).min(), let hi = healthPoints.map({ $0.high ?? $0.value }).max() {
+            parts.append(String(format: "%.1f – %.1f%%", lo, hi))
+        }
         if let m = h.maximumCapacity { parts.append("macOS shows \(m)%") }
         parts.append("\(h.cycles) cycles")
-        if let first = health.first { parts.append("since \(first.day.formatted(.dateTime.day().month(.abbreviated).year()))") }
         return parts.joined(separator: " · ")
     }
 
     private var healthDomain: ClosedRange<Double> {
-        let lo = (health.map(\.low).min() ?? 95).rounded(.down) - 1
-        let hi = (health.map(\.high).max() ?? 100).rounded(.up) + 1
+        let lo = (healthPoints.map { $0.low ?? $0.value }.min() ?? 95).rounded(.down) - 1
+        let hi = (healthPoints.map { $0.high ?? $0.value }.max() ?? 100).rounded(.up) + 1
         return lo...hi
     }
 
@@ -364,6 +384,14 @@ struct HistoryView: View {
         charging = await h.series([Metric.charging.rawValue], range: range, now: end)
         fans = await h.series([Metric.fanRPM.rawValue], range: range, now: end)
         health = await h.batteryHealth()
+        if healthIsDaily {
+            // A day counts if any part of it lies in the range.
+            healthPoints = health.filter { $0.day.addingTimeInterval(86_400) > start }
+                .map { HealthChartPoint(date: $0.day, value: $0.health, low: $0.low, high: $0.high, cycles: $0.cycles) }
+        } else {
+            healthPoints = await h.series([Metric.batteryHealth.rawValue], range: range, now: end)
+                .map { HealthChartPoint(date: $0.date, value: $0.value, low: nil, high: nil, cycles: nil) }
+        }
         stats = await h.stats()
     }
 }

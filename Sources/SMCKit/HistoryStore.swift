@@ -12,6 +12,7 @@ public enum Metric: String, CaseIterable, Sendable {
     case batteryWatts = "battery.watts"
     case charging = "charging"          // 0/1 per sample; bucket average = fraction of time charging
     case onAC = "ac"
+    case batteryHealth = "battery.health"   // raw max capacity ÷ design, %
 
     public var title: String {
         switch self {
@@ -24,6 +25,7 @@ public enum Metric: String, CaseIterable, Sendable {
         case .batteryWatts: "Battery power"
         case .charging: "Charging"
         case .onAC: "On AC"
+        case .batteryHealth: "Battery health"
         }
     }
 
@@ -42,6 +44,7 @@ public enum Metric: String, CaseIterable, Sendable {
             v[.batteryWatts] = b.batteryWatts
             v[.charging] = b.isCharging ? 1 : 0
             v[.onAC] = b.externalConnected ? 1 : 0
+            v[.batteryHealth] = b.health
         }
         return v
     }
@@ -155,6 +158,11 @@ public actor HistoryStore {
                 n INTEGER, max_capacity INTEGER, cycles INTEGER, design_mah INTEGER, raw_max_mah INTEGER,
                 PRIMARY KEY (file, day)) WITHOUT ROWID;
             """)
+        // Metrics added after the table was created (e.g. battery.health) become new columns.
+        let sampleColumns = columnNames("samples")
+        for col in Self.columns where !sampleColumns.contains(col) {
+            exec("ALTER TABLE samples ADD COLUMN \(col) REAL")
+        }
         // battery_daily v2 columns (daily mean + min/max, sample count, source).
         let existing = columnNames("battery_daily")
         for (col, type) in [("health_min", "REAL"), ("health_max", "REAL"), ("n", "INTEGER DEFAULT 1"),

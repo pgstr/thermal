@@ -171,3 +171,19 @@ private func rowCount(_ url: URL, _ sql: String) -> Int {
         #expect(abs(h[0].health - 100) < 0.05)
     }
 }
+
+@Suite struct HealthAsMetric {
+    @Test func addsHealthColumnToExistingTableAndRecordsIt() async {
+        let url = tempURL()
+        // A samples table from before battery.health existed.
+        var db: OpaquePointer?
+        sqlite3_open(url.path, &db)
+        sqlite3_exec(db, "CREATE TABLE samples (tier TEXT NOT NULL, ts INTEGER NOT NULL, n INTEGER NOT NULL, battery_temp REAL, die_max REAL, die_avg REAL, storage_temp REAL, fan_rpm REAL, battery_percent REAL, battery_watts REAL, charging REAL, ac REAL, battery_temp_min REAL, battery_temp_max REAL, die_peak REAL, PRIMARY KEY (tier, ts)) WITHOUT ROWID", nil, nil, nil)
+        sqlite3_close(db)
+        let t0: TimeInterval = 1_800_000_000
+        let store = HistoryStore(url: url)
+        for i in 0..<60 { await store.record(snap(t0 + Double(i), battery: 25, rawMax: 6124)) }
+        let h = await store.series([Metric.batteryHealth.rawValue], range: .hour, now: Date(timeIntervalSince1970: t0 + 60))
+        #expect(!h.isEmpty && h.allSatisfy { abs($0.value - 98) < 0.05 })
+    }
+}
