@@ -10,7 +10,7 @@ struct PopoverView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Header(open: open, quit: quit)
+            Header(loginItem: monitor.loginItem, open: open, quit: quit)
                 .padding(.horizontal, 16).padding(.top, 14)
 
             if !monitor.smcAvailable {
@@ -66,6 +66,7 @@ struct PopoverView: View {
 // MARK: - Header
 
 private struct Header: View {
+    let loginItem: LoginItem
     let open: (String) -> Void
     let quit: () -> Void
 
@@ -76,6 +77,8 @@ private struct Header: View {
             Menu {
                 Button("History…") { open("history") }
                 Button("Raw SMC…") { open("raw-smc") }
+                Divider()
+                Toggle("Launch at Login", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
                 Divider()
                 Button("Quit") { quit() }.keyboardShortcut("q")
             } label: {
@@ -245,6 +248,10 @@ private struct CoolChargingRow: View {
 
     @ViewBuilder private var settings: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if fans.helper.updatePending {
+                Text("An older fan helper (\(fans.helper.helperVersion ?? "?")) is still running; it's replaced on the next restart.")
+                    .foregroundStyle(.secondary)
+            }
             if !fans.helper.isEnabled {
                 HStack {
                     Text(fans.helper.statusText).foregroundStyle(.secondary)

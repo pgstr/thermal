@@ -18,6 +18,10 @@ import Security
 
     /// "auto" or "manual <rpm> <seconds left>".
     func status(reply: @escaping @Sendable (String) -> Void)
+
+    /// Since 0.4.0. Hand the fans back and exit, so launchd starts the newly installed binary on the
+    /// next connection. Called by the app when the helper's version differs from its own.
+    func exitForUpdate(reply: @escaping @Sendable () -> Void)
 }
 
 public enum FanHelperInfo {
@@ -37,7 +41,13 @@ public enum FanHelperInfo {
               let dict = info as? [String: Any] else { return nil }
         return dict[kSecCodeInfoTeamIdentifier as String] as? String
     }()
-    public static let version = "0.3.0"
+    /// Bump on every helper change: the app replaces a running helper whose version differs.
+    public static let version = "0.4.0"
+    /// Helpers older than this lack `exitForUpdate` (only a restart or `launchctl kickstart` replaces them).
+    public static let firstVersionWithExitForUpdate = "0.4.0"
+    /// With the fans on automatic and no app connected for this long, the helper exits (launchd
+    /// restarts it on demand). Also makes reinstalls take effect without a reboot.
+    public static let idleExitAfter: Double = 60
     public static let maxLease: Double = 30
 
     /// Code requirement the helper enforces on callers. Unsatisfiable when we have no team ID.

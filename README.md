@@ -23,6 +23,10 @@ Fan control needs the copy in `/Applications`.
 
 **For exact AlDente integration:** create a shortcut named **AlDente State** containing AlDente's **Get State** action.
 
+**Recommended:** turn on **Launch at Login** in the popover's `…` menu, so Cool charging keeps working after a restart.
+
+**Updates:** reinstalling is enough; the app replaces an outdated fan helper by itself.
+
 ## Development
 
 ```bash
@@ -35,6 +39,7 @@ swift run thermal -v       # print one sensor snapshot (--watch, --bench)
 
 - The fan helper only writes fan mode and target speed.
 - It hands the fans back to Apple when the app quits, crashes, hangs (10 s lease) or the Mac sleeps.
+- It exits after 60 s idle (launchd restarts it on demand).
 - Emergency reset: `make -C smcprobe && sudo ./smcprobe/fantest auto`.
 
 ## Layout

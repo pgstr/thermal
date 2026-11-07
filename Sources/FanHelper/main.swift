@@ -23,6 +23,9 @@ final class FanState {
     private let fanCount: Int
     private var leaseExpiry: Date?        // nil = fans are with Apple
     private var rpm: Double = 0
+    /// Number of connected clients and since when the helper has been idle (auto, no clients).
+    var connections = 0
+    private var idleSince = Date()
 
     init?() {
         conn = cfw_open()
@@ -84,6 +87,11 @@ final class FanState {
 
     func tick() {
         if let e = leaseExpiry, Date() > e { setAuto("lease expired") }
+        if leaseExpiry != nil || connections > 0 { idleSince = Date(); return }
+        if Date().timeIntervalSince(idleSince) >= FanHelperInfo.idleExitAfter {
+            log.notice("idle for \(Int(FanHelperInfo.idleExitAfter))s with fans on automatic; exiting")
+            exit(0)
+        }
     }
 
     var status: String {
@@ -125,25 +133,33 @@ final class Service: NSObject, FanHelperProtocol {
     func status(reply: @escaping @Sendable (String) -> Void) {
         state.queue.async { reply(state.status) }
     }
+
+    func exitForUpdate(reply: @escaping @Sendable () -> Void) {
+        state.queue.async {
+            state.setAuto("exiting for update")
+            log.notice("exiting so launchd starts the updated helper")
+            reply()
+            // Give XPC a moment to deliver the reply.
+            state.queue.asyncAfter(deadline: .now() + 0.3) { exit(0) }
+        }
+    }
 }
 
 final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
-    private var connections = 0   // only touched on state.queue
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection c: NSXPCConnection) -> Bool {
         // Only Thermal.app signed by our team may connect; others are rejected by the system.
         c.setCodeSigningRequirement(FanHelperInfo.clientRequirement)
         c.exportedInterface = NSXPCInterface(with: FanHelperProtocol.self)
         c.exportedObject = Service()
-        c.invalidationHandler = { [weak self] in
+        c.invalidationHandler = {
             state.queue.async {
-                guard let self else { return }
-                self.connections -= 1
+                state.connections -= 1
                 // App quit or crashed: don't wait for the lease.
-                if self.connections <= 0, state.isManual { state.setAuto("app disconnected") }
+                if state.connections <= 0, state.isManual { state.setAuto("app disconnected") }
             }
         }
-        state.queue.async { self.connections += 1 }
+        state.queue.async { state.connections += 1 }
         c.resume()
         return true
     }

@@ -266,6 +266,14 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
 | M5 | Combined rules plus notifications | The rules in 5.3 run for a week. Fans are back under Apple's control whenever no rule is active. |
 | M6 | *(optional)* Own charging | `PowerUIBackend` and `CHIE` discharge behind the same `ChargingBackend` interface. Only after M5 is stable, and only if we choose to stop depending on AlDente. |
 
+### 6.1 Done after M3 (2026-11-07)
+- **Launch at Login** (`SMAppService.mainApp`), a checkmark item in the popover's `…` menu.
+- **Helper updates without a reboot:**
+  - After a reinstall, launchd kept running the *old* helper; it was observed running from before the install.
+  - Since helper 0.4.0, the app compares versions on its first connection, and an outdated helper exits so launchd starts the new binary. Tested live: 0.4.0 → 0.4.1 → 0.4.0, each swap within about 4 s, no password.
+  - The helper also exits after 60 s idle (fans on automatic, no client).
+  - Pre-0.4.0 helpers needed one manual `sudo launchctl kickstart -k system/dev.streller.thermal.fanhelper`.
+
 ## 7. Build and tooling
 
 - Swift 6 and SwiftUI. Requires macOS 27.

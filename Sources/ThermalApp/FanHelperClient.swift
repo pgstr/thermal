@@ -8,6 +8,12 @@ import ServiceManagement
 final class FanHelperClient {
     private(set) var status: SMAppService.Status = .notRegistered
     private(set) var lastError: String?
+    /// Version reported by the running helper (nil until the first connection).
+    private(set) var helperVersion: String?
+    /// The running helper is older than this app and can't replace itself (pre-0.4.0 helper):
+    /// it only goes away on restart or `sudo launchctl kickstart -k system/<label>`.
+    private(set) var updatePending = false
+    @ObservationIgnored private var versionChecked = false
 
     @ObservationIgnored private let service = SMAppService.daemon(plistName: FanHelperInfo.plistName)
     @ObservationIgnored private var connection: NSXPCConnection?
@@ -57,7 +63,10 @@ final class FanHelperClient {
         // Only talk to a helper signed by our team.
         c.setCodeSigningRequirement(FanHelperInfo.helperRequirement)
         c.invalidationHandler = { [weak self] in
-            Task { @MainActor in self?.connection = nil }
+            Task { @MainActor in
+                self?.connection = nil
+                self?.versionChecked = false   // a new helper process may answer next time
+            }
         }
         c.resume()
         connection = c
@@ -66,6 +75,11 @@ final class FanHelperClient {
 
     private func call(_ body: @escaping (FanHelperProtocol, @escaping @Sendable (String?) -> Void) -> Void) async -> String? {
         guard isEnabled else { return "Fan control is not enabled" }
+        await ensureCurrentHelper()
+        return await rawCall(body)
+    }
+
+    private func rawCall(_ body: @escaping (FanHelperProtocol, @escaping @Sendable (String?) -> Void) -> Void) async -> String? {
         let c = makeConnection()
         let result: String? = await withCheckedContinuation { cont in
             let once = ResumeOnce(cont)
@@ -80,6 +94,34 @@ final class FanHelperClient {
         }
         lastError = result
         return result
+    }
+
+    /// After a reinstall, launchd keeps the *old* helper process running. On the first call per
+    /// connection, compare versions; a 0.4.0+ helper that differs is asked to exit, so the next
+    /// connection starts the installed binary.
+    private func ensureCurrentHelper() async {
+        guard !versionChecked else { return }
+        for attempt in 0..<2 {
+            let v = await rawCall { helper, done in helper.version { done($0) } }
+            // rawCall reports XPC errors through the same string; a version starts with a digit.
+            guard let v, v.first?.isNumber == true else { return }   // retry on the next call
+            helperVersion = v
+            guard v != FanHelperInfo.version else {
+                updatePending = false
+                versionChecked = true
+                return
+            }
+            let canExit = v.compare(FanHelperInfo.firstVersionWithExitForUpdate, options: .numeric) != .orderedAscending
+            guard canExit, attempt == 0 else {
+                updatePending = true    // legacy helper: keeps working, replaced on next restart
+                versionChecked = true
+                return
+            }
+            _ = await rawCall { helper, done in helper.exitForUpdate { done(nil) } }
+            connection?.invalidate()
+            connection = nil
+            try? await Task.sleep(for: .milliseconds(800))
+        }
     }
 
     func setTarget(_ rpm: Double, lease: Double) async -> String? {

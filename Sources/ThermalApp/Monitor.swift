@@ -21,6 +21,7 @@ final class Monitor {
     let reader = SensorReader()
     let history = HistoryStore(url: HistoryStore.defaultURL())
     let fans = FanController()
+    let loginItem = LoginItem()
     @ObservationIgnored private var sleepObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var tick = 0
