@@ -15,6 +15,8 @@ public struct BatteryStatus: Sendable, Equatable {
     public var rawMaxCapacity: Int        // mAh
     public var notChargingReason: Int     // 0 = none; 4096 = held by a charge limit (AlDente / macOS)
     public var adapterWatts: Int?
+    /// Apple's "Maximum Capacity" as shown in System Settings (BatteryData.MaxCapacity, capped at 100).
+    public var maximumCapacity: Int? = nil
 
     /// Power flowing into (+) or out of (−) the battery, in watts.
     public var batteryWatts: Double { voltage * Double(amperage) / 1000 }
@@ -64,7 +66,8 @@ public struct BatteryStatus: Sendable, Equatable {
             designCapacity: int("DesignCapacity", batteryData, dict) ?? 0,
             rawMaxCapacity: int("AppleRawMaxCapacity", batteryData, dict) ?? 0,
             notChargingReason: int("NotChargingReason", charger) ?? 0,
-            adapterWatts: int("Watts", adapter)
+            adapterWatts: int("Watts", adapter),
+            maximumCapacity: int("MaxCapacity", batteryData)
         )
     }
 }

@@ -17,7 +17,7 @@ let package = Package(
             name: "CSMC",
             linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]
         ),
-        .target(name: "SMCKit", dependencies: ["CSMC"]),
+        .target(name: "SMCKit", dependencies: ["CSMC"], linkerSettings: [.linkedLibrary("sqlite3")]),
         // SMC fan WRITES (allowlisted F{n}md / F{n}Tg). Linked only by the privileged helper.
         .target(
             name: "CFanWrite",
@@ -32,8 +32,7 @@ let package = Package(
         .executableTarget(name: "ThermalCLI", dependencies: ["SMCKit"]),
         .executableTarget(
             name: "ThermalApp",
-            dependencies: ["SMCKit", "FanHelperProtocol"],
-            linkerSettings: [.linkedLibrary("sqlite3")]
+            dependencies: ["SMCKit", "FanHelperProtocol"]
         ),
         .testTarget(name: "SMCKitTests", dependencies: ["SMCKit"]),
     ]

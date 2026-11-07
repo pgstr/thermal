@@ -274,6 +274,26 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
   - The helper also exits after 60 s idle (fans on automatic, no client).
   - Pre-0.4.0 helpers needed one manual `sudo launchctl kickstart -k system/dev.streller.thermal.fanhelper`.
 
+### 6.2 Long-term history (2026-11-07)
+- **v1 was too big.** It stored one row per value and second, plus every sensor per minute: 23 MB after about 2 days.
+- **v2 is in `SMCKit/HistoryStore`.** It uses wide rows, one per time bucket with all summary metrics as columns. A table without row IDs keeps rows clustered by tier and time.
+
+  | Tier | Bucket | Kept | View |
+  |---|---|---|---|
+  | recent | 5 s | 48 h | 1 h |
+  | minute | 1 min | 30 days | 24 h / 7 d / 30 d |
+  | hour | 1 h (with battery min/max, die peak) | forever | 1 y |
+  | `battery_daily` | 1 day: health (raw max ÷ design), Apple's "Maximum Capacity", cycles | forever | health trend |
+
+- **Recording:** buckets are averaged in memory and written every 30 s. A bucket that was written on quit is resumed after a restart.
+- **Migration:** v1 data was migrated automatically (backup kept). 23.3 MB became 460 KB for the same data.
+- **Size:** about 7 MB at steady state, plus under 1 MB per year.
+- **History window redesign:**
+  - battery temperature in cyan with a min–max band, and the hottest die as a muted, optional line;
+  - charging as a thin strip; gaps shown as gaps; hover shows values;
+  - charge as a small chart, fans as a slim strip;
+  - a battery health row; ranges from 1 h to 1 y.
+
 ## 7. Build and tooling
 
 - Swift 6 and SwiftUI. Requires macOS 27.

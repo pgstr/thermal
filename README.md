@@ -53,4 +53,9 @@ swift run thermal -v       # print one sensor snapshot (--watch, --bench)
 | `smcprobe/` | Diagnostic tools and hardware findings ([README](smcprobe/README.md)) |
 | [SPEC.md](SPEC.md) | Design, decisions and milestones |
 
-History is stored in `~/Library/Application Support/Thermal/history.sqlite`.
+**History** is stored in `~/Library/Application Support/Thermal/history.sqlite`:
+- 5 s resolution for 48 h,
+- 1 min for 30 days,
+- hourly plus daily battery health forever.
+
+That's about 7 MB at steady state plus under 1 MB per year.
