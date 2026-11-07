@@ -37,8 +37,17 @@ struct HistoryView: View {
             healthRow
             footer
         }
-        .padding(20)
-        .frame(minWidth: 640, minHeight: 600)
+        .padding(.horizontal, 20).padding(.bottom, 16).padding(.top, 8)
+        .frame(minWidth: 640, maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .toolbar {
+            // In the toolbar the range control can never be pushed under the title bar.
+            ToolbarItem(placement: .principal) {
+                Picker("Range", selection: $range) {
+                    ForEach(HistoryRange.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden().fixedSize()
+            }
+        }
         .task(id: range) {
             while !Task.isCancelled {
                 await load()
@@ -50,20 +59,13 @@ struct HistoryView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(selection == nil ? "Battery" : selectedTimeText)
-                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(headline)
-                    .font(.system(size: 40, weight: .light)).tracking(-1.2).monospacedDigit()
-                    .contentTransition(.numericText())
-                Text(subline).foregroundStyle(.secondary).monospacedDigit()
-            }
-            Spacer()
-            Picker("Range", selection: $range) {
-                ForEach(HistoryRange.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented).labelsHidden().fixedSize()
+        VStack(alignment: .leading, spacing: 4) {
+            Text(selection == nil ? "Battery" : selectedTimeText)
+                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(headline)
+                .font(.system(size: 40, weight: .light)).tracking(-1.2).monospacedDigit()
+                .contentTransition(.numericText())
+            Text(subline).foregroundStyle(.secondary).monospacedDigit()
         }
     }
 
@@ -127,7 +129,7 @@ struct HistoryView: View {
                     AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))°") } }
                 }
             }
-            .frame(minHeight: 220)
+            .frame(minHeight: 140, idealHeight: 260, maxHeight: .infinity)
 
             HStack(spacing: 14) {
                 legend("Battery", color: .cyan, on: true)
@@ -310,11 +312,11 @@ struct HistoryView: View {
         }
     }
 
+    /// Title with its value right next to it (not at the right edge, where the axis labels are).
     private func row(_ title: String, value: String?) -> some View {
-        HStack {
+        HStack(spacing: 6) {
             Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-            Spacer()
-            Text(value ?? "–").font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            Text(value ?? "–").font(.caption).foregroundStyle(.tertiary).monospacedDigit()
         }
     }
 

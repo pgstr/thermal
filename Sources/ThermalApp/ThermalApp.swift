@@ -22,7 +22,8 @@ struct ThermalApp: App {
             HistoryView()
                 .environment(monitor)
         }
-        .defaultSize(width: 860, height: 640)
+        .defaultSize(width: 880, height: 780)
+        .windowResizability(.contentMinSize)   // never smaller than the content: nothing gets cut off
 
         Window("Raw SMC Keys", id: "raw-smc") {
             RawSMCView()
