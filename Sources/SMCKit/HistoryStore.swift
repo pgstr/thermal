@@ -62,12 +62,17 @@ public struct HistoryBand: Sendable, Identifiable {
     public var id: TimeInterval { date.timeIntervalSince1970 }
 }
 
-/// One row per day, kept forever.
+/// One row per day, kept forever. Health = raw max capacity ÷ design capacity, which swings by
+/// a few percent within a day, so the daily mean plus min/max are kept.
 public struct BatteryHealthPoint: Sendable, Identifiable {
     public let day: Date
-    public let health: Double            // raw max capacity ÷ design capacity, %
+    public let health: Double            // daily mean, %
+    public let low: Double
+    public let high: Double
     public let maximumCapacity: Int?     // Apple's figure, %
     public let cycles: Int
+    public let samples: Int
+    public let fromPowerLog: Bool        // imported from macOS's power log (vs. Thermal's hourly samples)
     public var id: TimeInterval { day.timeIntervalSince1970 }
 }
 
@@ -99,7 +104,8 @@ public enum HistoryRange: String, CaseIterable, Identifiable, Sendable {
 /// | recent | 5 s    | 48 h    | 1 h view     |
 /// | minute | 60 s   | 30 days | 24 h–30 d    |
 /// | hour   | 3600 s | forever | 1 y view     |
-/// plus `battery_daily` (health, Apple's max capacity, cycles), kept forever.
+/// plus `battery_daily` (daily health mean/min/max, Apple's max capacity, cycles), kept forever,
+/// filled from macOS's power log where available and from hourly samples otherwise.
 /// Buckets are averaged in memory; completed rows are written in batches every 30 s.
 public actor HistoryStore {
     public enum Tier: String, CaseIterable, Sendable {
@@ -144,13 +150,32 @@ public actor HistoryStore {
             CREATE TABLE IF NOT EXISTS battery_daily (
                 day TEXT PRIMARY KEY, health REAL, max_capacity INTEGER, cycles INTEGER,
                 design_mah INTEGER, raw_max_mah INTEGER);
+            CREATE TABLE IF NOT EXISTS powerlog_days (
+                file TEXT NOT NULL, day TEXT NOT NULL, health_sum REAL, health_min REAL, health_max REAL,
+                n INTEGER, max_capacity INTEGER, cycles INTEGER, design_mah INTEGER, raw_max_mah INTEGER,
+                PRIMARY KEY (file, day)) WITHOUT ROWID;
             """)
+        // battery_daily v2 columns (daily mean + min/max, sample count, source).
+        let existing = columnNames("battery_daily")
+        for (col, type) in [("health_min", "REAL"), ("health_max", "REAL"), ("n", "INTEGER DEFAULT 1"),
+                            ("source", "TEXT DEFAULT 'thermal'")] where !existing.contains(col) {
+            exec("ALTER TABLE battery_daily ADD COLUMN \(col) \(type)")
+        }
         migrateV1IfNeeded()
         return true
     }
 
     @discardableResult
     private func exec(_ sql: String) -> Bool { sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK }
+
+    private func columnNames(_ table: String) -> Set<String> {
+        var out = Set<String>()
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil)
+        while sqlite3_step(stmt) == SQLITE_ROW { out.insert(String(cString: sqlite3_column_text(stmt, 1))) }
+        return out
+    }
 
     private func tableExists(_ name: String) -> Bool {
         var stmt: OpaquePointer?
@@ -289,16 +314,28 @@ public actor HistoryStore {
         pending.removeAll(keepingCapacity: true)
     }
 
+    /// Once per hour: fold the current health into today's mean/min/max. Days imported from the
+    /// macOS power log (hundreds of samples per day) are left alone.
     private func recordHealth(_ s: Snapshot) {
         guard let b = s.battery, b.designCapacity > 0, let health = b.health else { return }
         let day = Self.dayString(s.date)
-        // Once per day, plus whenever the hour changes (keeps the day's latest values).
         let key = day + String(Int(s.date.timeIntervalSince1970) / 3600)
         guard key != lastHealthDay else { return }
         lastHealthDay = key
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO battery_daily VALUES (?1, ?2, ?3, ?4, ?5, ?6)", -1, &stmt, nil)
+        sqlite3_prepare_v2(db, """
+            INSERT INTO battery_daily (day, health, health_min, health_max, n, max_capacity, cycles,
+                                       design_mah, raw_max_mah, source)
+            VALUES (?1, ?2, ?2, ?2, 1, ?3, ?4, ?5, ?6, 'thermal')
+            ON CONFLICT(day) DO UPDATE SET
+                health = (health * n + excluded.health) / (n + 1),
+                health_min = MIN(COALESCE(health_min, health), excluded.health),
+                health_max = MAX(COALESCE(health_max, health), excluded.health),
+                n = n + 1, max_capacity = excluded.max_capacity, cycles = excluded.cycles,
+                design_mah = excluded.design_mah, raw_max_mah = excluded.raw_max_mah
+            WHERE source = 'thermal'
+            """, -1, &stmt, nil)
         sqlite3_bind_text(stmt, 1, day, -1, SQLITE_TRANSIENT)
         sqlite3_bind_double(stmt, 2, health)
         if let m = b.maximumCapacity { sqlite3_bind_int64(stmt, 3, Int64(m)) } else { sqlite3_bind_null(stmt, 3) }
@@ -306,6 +343,106 @@ public actor HistoryStore {
         sqlite3_bind_int64(stmt, 5, Int64(b.designCapacity))
         sqlite3_bind_int64(stmt, 6, Int64(b.rawMaxCapacity))
         sqlite3_step(stmt)
+    }
+
+    // MARK: macOS power log import
+
+    public static let powerLogDirectory = URL(fileURLWithPath: "/private/var/db/powerlog/Library/BatteryLife")
+
+    /// Imports daily battery health from macOS's power log (world-readable, opened read-only).
+    /// Archives (`Archives/*.PLSQL.gz`) are imported once and kept even after macOS deletes them;
+    /// the current log is re-read on every call. Returns the number of days now backed by the log.
+    @discardableResult
+    public func importPowerLog(current: URL? = HistoryStore.powerLogDirectory.appendingPathComponent("CurrentPowerlog.PLSQL"),
+                               archives: [URL]? = nil) -> Int {
+        guard openIfNeeded() else { return 0 }
+        let archiveFiles = archives ?? ((try? FileManager.default.contentsOfDirectory(
+            at: Self.powerLogDirectory.appendingPathComponent("Archives"), includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasSuffix(".PLSQL.gz") || $0.lastPathComponent.hasSuffix(".PLSQL") }
+        let done = importedPowerLogFiles()
+        for url in archiveFiles where !done.contains(url.lastPathComponent) {
+            importPowerLogFile(url, as: url.lastPathComponent)
+        }
+        if let current, FileManager.default.isReadableFile(atPath: current.path) {
+            importPowerLogFile(current, as: "current")
+        }
+        // Rebuild the power-log-backed days from all files (a day can span two files).
+        exec("""
+            INSERT OR REPLACE INTO battery_daily (day, health, health_min, health_max, n, max_capacity, cycles,
+                                                  design_mah, raw_max_mah, source)
+            SELECT day, SUM(health_sum) / SUM(n), MIN(health_min), MAX(health_max), SUM(n), MAX(max_capacity),
+                   MAX(cycles), MAX(design_mah), MAX(raw_max_mah), 'powerlog'
+            FROM powerlog_days GROUP BY day
+            """)
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_prepare_v2(db, "SELECT COUNT(DISTINCT day) FROM powerlog_days", -1, &stmt, nil)
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int64(stmt, 0)) : 0
+    }
+
+    private func importedPowerLogFiles() -> Set<String> {
+        var out = Set<String>()
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_prepare_v2(db, "SELECT DISTINCT file FROM powerlog_days", -1, &stmt, nil)
+        while sqlite3_step(stmt) == SQLITE_ROW { out.insert(String(cString: sqlite3_column_text(stmt, 0))) }
+        return out
+    }
+
+    private func importPowerLogFile(_ url: URL, as name: String) {
+        var path = url.path
+        var temp: URL?
+        if url.pathExtension == "gz" {
+            // Decompress to a temporary file; macOS keeps archives gzipped.
+            let out = FileManager.default.temporaryDirectory.appendingPathComponent("thermal-powerlog-\(UUID().uuidString).PLSQL")
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/gunzip")
+            p.arguments = ["-c", url.path]
+            guard FileManager.default.createFile(atPath: out.path, contents: nil),
+                  let handle = try? FileHandle(forWritingTo: out) else { return }
+            p.standardOutput = handle
+            guard (try? p.run()) != nil else { return }
+            p.waitUntilExit()
+            try? handle.close()
+            guard p.terminationStatus == 0 else { try? FileManager.default.removeItem(at: out); return }
+            path = out.path
+            temp = out
+        }
+        defer { if let temp { try? FileManager.default.removeItem(at: temp) } }
+
+        var log: OpaquePointer?
+        let uri = "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?mode=ro&immutable=1"
+        guard sqlite3_open_v2(uri, &log, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else {
+            sqlite3_close(log); return
+        }
+        defer { sqlite3_close(log) }
+        var q: OpaquePointer?
+        defer { sqlite3_finalize(q) }
+        // Private Apple schema: if it changes, the prepare fails and nothing is imported.
+        let sql = """
+            SELECT date(timestamp, 'unixepoch', 'localtime') AS d,
+                   SUM(AppleRawMaxCapacity * 100.0 / DesignCapacity), MIN(AppleRawMaxCapacity * 100.0 / DesignCapacity),
+                   MAX(AppleRawMaxCapacity * 100.0 / DesignCapacity), COUNT(*), MAX(MaxCapacity), MAX(CycleCount),
+                   MAX(DesignCapacity), CAST(AVG(AppleRawMaxCapacity) AS INTEGER)
+            FROM PLBatteryAgent_EventBackward_Battery
+            WHERE DesignCapacity > 0 AND AppleRawMaxCapacity > 0
+            GROUP BY d
+            """
+        guard sqlite3_prepare_v2(log, sql, -1, &q, nil) == SQLITE_OK else { return }
+        exec("BEGIN")
+        exec("DELETE FROM powerlog_days WHERE file = '\(name.replacingOccurrences(of: "'", with: "''"))'")
+        var ins: OpaquePointer?
+        sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO powerlog_days VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)", -1, &ins, nil)
+        while sqlite3_step(q) == SQLITE_ROW {
+            sqlite3_bind_text(ins, 1, name, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ins, 2, String(cString: sqlite3_column_text(q, 0)), -1, SQLITE_TRANSIENT)
+            for i in 1...3 { sqlite3_bind_double(ins, Int32(i + 2), sqlite3_column_double(q, Int32(i))) }
+            for i in 4...8 { sqlite3_bind_int64(ins, Int32(i + 2), sqlite3_column_int64(q, Int32(i))) }
+            sqlite3_step(ins)
+            sqlite3_reset(ins)
+        }
+        sqlite3_finalize(ins)
+        exec("COMMIT")
     }
 
     private static func dayString(_ d: Date) -> String {
@@ -396,15 +533,22 @@ public actor HistoryStore {
         var out: [BatteryHealthPoint] = []
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
-        sqlite3_prepare_v2(db, "SELECT day, health, max_capacity, cycles FROM battery_daily ORDER BY day", -1, &stmt, nil)
+        sqlite3_prepare_v2(db, """
+            SELECT day, health, COALESCE(health_min, health), COALESCE(health_max, health), max_capacity, cycles,
+                   COALESCE(n, 1), COALESCE(source, 'thermal') = 'powerlog'
+            FROM battery_daily ORDER BY day
+            """, -1, &stmt, nil)
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         while sqlite3_step(stmt) == SQLITE_ROW {
             guard let dayText = sqlite3_column_text(stmt, 0), let day = f.date(from: String(cString: dayText)) else { continue }
             out.append(BatteryHealthPoint(
                 day: day, health: sqlite3_column_double(stmt, 1),
-                maximumCapacity: sqlite3_column_type(stmt, 2) == SQLITE_NULL ? nil : Int(sqlite3_column_int64(stmt, 2)),
-                cycles: Int(sqlite3_column_int64(stmt, 3))))
+                low: sqlite3_column_double(stmt, 2), high: sqlite3_column_double(stmt, 3),
+                maximumCapacity: sqlite3_column_type(stmt, 4) == SQLITE_NULL ? nil : Int(sqlite3_column_int64(stmt, 4)),
+                cycles: Int(sqlite3_column_int64(stmt, 5)),
+                samples: Int(sqlite3_column_int64(stmt, 6)),
+                fromPowerLog: sqlite3_column_int64(stmt, 7) != 0))
         }
         return out
     }

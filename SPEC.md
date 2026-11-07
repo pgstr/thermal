@@ -288,6 +288,11 @@ Rules are triggers that propose a minimum rpm. All thresholds are adjustable. Th
 - **Recording:** buckets are averaged in memory and written every 30 s. A bucket that was written on quit is resumed after a restart.
 - **Migration:** v1 data was migrated automatically (backup kept). 23.3 MB became 460 KB for the same data.
 - **Size:** about 7 MB at steady state, plus under 1 MB per year.
+- **Battery health history:**
+  - Health (raw max capacity ÷ design) swings by about ±4% within a day, so `battery_daily` keeps the daily **mean, min and max**. Thermal samples it once an hour.
+  - It also **imports macOS's power log**, which is world-readable and opened read-only: `/private/var/db/powerlog/Library/BatteryLife/CurrentPowerlog.PLSQL` plus the gzipped `Archives/`. The table used is `PLBatteryAgent_EventBackward_Battery`, with hundreds of samples per day.
+  - The import runs at launch and every 6 h. Archives are imported once and kept after macOS deletes them, and imported days take precedence over Thermal's own hourly samples.
+  - This backfilled 5–7 Nov (the Mac's first days) on the first run.
 - **History window redesign:**
   - battery temperature in cyan with a min–max band, and the hottest die as a muted, optional line;
   - charging as a thin strip; gaps shown as gaps; hover shows values;

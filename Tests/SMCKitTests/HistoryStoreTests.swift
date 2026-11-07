@@ -86,6 +86,7 @@ private func rowCount(_ url: URL, _ sql: String) -> Int {
         #expect(h.count == 2)
         #expect(abs(h[0].health - 6286.0 / 6249 * 100) < 0.01)
         #expect(h[1].maximumCapacity == 100 && h[1].cycles == 3)
+        #expect(h[0].low == h[0].health && h[0].samples == 1)
     }
 
     @Test func migratesV1Tables() async {
@@ -109,5 +110,64 @@ private func rowCount(_ url: URL, _ sql: String) -> Int {
         let minute = await store.series([Metric.batteryTemp.rawValue], range: .day, now: now)
         #expect(minute.map(\.value) == [25, 27])
         #expect(rowCount(url, "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('raw','minute','metric')") == 0)
+    }
+}
+
+@Suite struct BatteryHealthHistory {
+    let t0: TimeInterval = 1_800_000_000   // aligned to the hour
+
+    /// A minimal stand-in for macOS's power log table.
+    func fakePowerLog(_ rows: [(TimeInterval, Int)], gzip: Bool = false) -> URL {
+        let url = tempURL()
+        var db: OpaquePointer?
+        sqlite3_open(url.path, &db)
+        sqlite3_exec(db, "CREATE TABLE PLBatteryAgent_EventBackward_Battery (timestamp REAL, AppleRawMaxCapacity INTEGER, DesignCapacity INTEGER, MaxCapacity INTEGER, CycleCount INTEGER)", nil, nil, nil)
+        for (t, raw) in rows {
+            sqlite3_exec(db, "INSERT INTO PLBatteryAgent_EventBackward_Battery VALUES (\(t), \(raw), 6249, 100, 5)", nil, nil, nil)
+        }
+        sqlite3_close(db)
+        guard gzip else { return url }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+        p.arguments = [url.path]
+        try? p.run(); p.waitUntilExit()
+        return URL(fileURLWithPath: url.path + ".gz")
+    }
+
+    @Test func hourlySamplesBecomeDailyMeanMinMax() async {
+        let store = HistoryStore(url: tempURL())
+        await store.record(snap(t0, battery: 25, rawMax: 6249))              // 100 %
+        await store.record(snap(t0 + 60, battery: 25, rawMax: 1))            // same hour: ignored
+        await store.record(snap(t0 + 3600, battery: 25, rawMax: 6124))       // 98 %
+        let h = await store.batteryHealth()
+        #expect(h.count == 1)
+        #expect(abs(h[0].health - 99) < 0.05)
+        #expect(abs(h[0].low - 98) < 0.05 && abs(h[0].high - 100) < 0.05)
+        #expect(h[0].samples == 2 && !h[0].fromPowerLog)
+    }
+
+    @Test func importsCurrentLogAndGzippedArchive() async {
+        let store = HistoryStore(url: tempURL())
+        let day = 86_400.0
+        let archive = fakePowerLog([(t0 - 2 * day, 6249), (t0 - 2 * day + 60, 6124)], gzip: true)
+        let current = fakePowerLog([(t0, 6000)])
+        let days = await store.importPowerLog(current: current, archives: [archive])
+        #expect(days == 2)
+        let h = await store.batteryHealth()
+        #expect(h.count == 2 && h.allSatisfy(\.fromPowerLog))
+        #expect(abs(h[0].health - 99) < 0.05 && h[0].samples == 2)
+        #expect(h[1].cycles == 5 && h[1].maximumCapacity == 100)
+    }
+
+    @Test func archivesSurviveDeletionAndBeatHourlySamples() async {
+        let store = HistoryStore(url: tempURL())
+        let archive = fakePowerLog([(t0, 6249)])
+        await store.importPowerLog(current: nil, archives: [archive])
+        try? FileManager.default.removeItem(at: archive)              // macOS rotates it away
+        await store.importPowerLog(current: nil, archives: [])
+        await store.record(snap(t0 + 7200, battery: 25, rawMax: 3000)) // must not touch the imported day
+        let h = await store.batteryHealth()
+        #expect(h.count == 1 && h[0].fromPowerLog)
+        #expect(abs(h[0].health - 100) < 0.05)
     }
 }

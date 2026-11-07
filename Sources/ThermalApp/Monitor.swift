@@ -40,6 +40,8 @@ final class Monitor {
                 if self.popoverVisible { self.shown = s }
                 if let text = self.label.update(with: s, now: s.date) { self.menuBarText = text }
                 await self.history.record(s)
+                // Battery health history from macOS's power log: at launch and every 6 hours.
+                if self.tick % 21_600 == 5 { Task { await self.history.importPowerLog() } }
                 if self.tick % 10 == 0 { self.fandyRunning = Self.isAppRunning(named: "Fandy") }
                 await self.fans.update(with: s, fandyRunning: self.fandyRunning)
                 self.tick += 1

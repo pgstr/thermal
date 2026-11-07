@@ -16,6 +16,7 @@ struct HistoryView: View {
     @State private var health: [BatteryHealthPoint] = []
     @State private var stats: HistoryStore.Stats?
     @State private var selection: Date?
+    @State private var healthSelection: Date?
     @State private var showDie = true
     @State private var end = Date()
 
@@ -206,44 +207,77 @@ struct HistoryView: View {
         return "Peak \(Int(peak).formatted()) rpm · on \(Int(Double(spinning) / Double(max(fans.count, 1)) * 100))% of the time"
     }
 
-    // MARK: Battery health
+    // MARK: Battery health (all time, independent of the range picker)
 
     private var healthRow: some View {
-        HStack(alignment: .center, spacing: 16) {
+        VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Battery health").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(health.last.map { String(format: "%.1f%%", $0.health) } ?? "–")
+                Text(selectedHealth.map { $0.day.formatted(.dateTime.day().month(.abbreviated).year()) } ?? "Battery health")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text((selectedHealth ?? health.last).map { String(format: "%.1f%%", $0.health) } ?? "–")
                     .font(.system(size: 28, weight: .light)).monospacedDigit()
-                Text(healthSubline).font(.caption).foregroundStyle(.secondary)
+                Text(healthSubline).font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
-            Spacer()
             if health.count > 1 {
-                Chart(health) { h in
-                    LineMark(x: .value("Day", h.day), y: .value("%", h.health))
-                        .foregroundStyle(Color.cyan)
-                        .interpolationMethod(.monotone)
+                Chart {
+                    ForEach(health) { h in
+                        AreaMark(x: .value("Day", h.day), yStart: .value("Low", h.low), yEnd: .value("High", h.high))
+                            .foregroundStyle(Color.cyan.opacity(0.12))
+                            .interpolationMethod(.monotone)
+                        LineMark(x: .value("Day", h.day), y: .value("%", h.health))
+                            .foregroundStyle(Color.cyan)
+                            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .interpolationMethod(.monotone)
+                        if health.count <= 31 {
+                            PointMark(x: .value("Day", h.day), y: .value("%", h.health))
+                                .foregroundStyle(Color.cyan).symbolSize(14)
+                        }
+                    }
+                    if let s = selectedHealth {
+                        RuleMark(x: .value("Selected", s.day)).foregroundStyle(Color.secondary.opacity(0.4))
+                    }
                 }
                 .chartYScale(domain: healthDomain)
-                .chartXAxis(.hidden).chartYAxis(.hidden)
-                .frame(width: 220, height: 44)
+                .chartXSelection(value: $healthSelection)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 6)) { _ in
+                        AxisGridLine().foregroundStyle(Color.secondary.opacity(0.12))
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { v in
+                        AxisGridLine().foregroundStyle(Color.secondary.opacity(0.12))
+                        AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))%") } }
+                    }
+                }
+                .frame(height: 110)
             } else {
                 Text("Trend appears after a few days").font(.caption).foregroundStyle(.tertiary)
             }
         }
     }
 
+    private var selectedHealth: BatteryHealthPoint? {
+        guard let sel = healthSelection else { return nil }
+        return health.min { abs($0.day.timeIntervalSince(sel)) < abs($1.day.timeIntervalSince(sel)) }
+    }
+
     private var healthSubline: String {
-        guard let h = health.last else { return "Recorded once a day" }
+        guard let h = selectedHealth ?? health.last else { return "Recorded daily" }
+        if selectedHealth != nil {
+            return String(format: "%.1f – %.1f%% during the day · %d cycles", h.low, h.high, h.cycles)
+        }
         var parts: [String] = []
         if let m = h.maximumCapacity { parts.append("macOS shows \(m)%") }
         parts.append("\(h.cycles) cycles")
-        if let first = health.first { parts.append("tracked since \(first.day.formatted(.dateTime.day().month(.abbreviated).year()))") }
+        if let first = health.first { parts.append("since \(first.day.formatted(.dateTime.day().month(.abbreviated).year()))") }
         return parts.joined(separator: " · ")
     }
 
     private var healthDomain: ClosedRange<Double> {
-        let v = health.map(\.health)
-        let lo = (v.min() ?? 95) - 1, hi = (v.max() ?? 100) + 1
+        let lo = (health.map(\.low).min() ?? 95).rounded(.down) - 1
+        let hi = (health.map(\.high).max() ?? 100).rounded(.up) + 1
         return lo...hi
     }
 
